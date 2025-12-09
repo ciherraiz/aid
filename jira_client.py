@@ -2,22 +2,21 @@ import os
 from jira import JIRA
 import streamlit as st
 
-def get_config(key):
-    # 1. Si está en streamlit secrets, lo usamos
-    if key in st.secrets:
-        return st.secrets[key]
+def get_key(key):
 
-    # 2. Si está en variables de entorno (Codespaces, local)
     if key in os.environ:
         return os.environ[key]
 
+    if key in st.secrets:
+        return st.secrets[key]
+    
     raise KeyError(f"No se encuentra la variable de configuración: {key}")
 
 class JiraClient:
     def __init__(self):
-        jira_url = get_config("JIRA_URL")
-        jira_user = get_config("JIRA_USER")
-        jira_token = get_config("JIRA_TOKEN")
+        jira_url = get_key("JIRA_URL")
+        jira_user = get_key("JIRA_USER")
+        jira_token = get_key("JIRA_TOKEN")
 
         if not jira_url or not jira_user or not jira_token:
             raise ValueError("Faltan variables de entorno para conectar a Jira")
