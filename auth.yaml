@@ -1,0 +1,14 @@
+credentials:
+  usernames:
+    admin:
+      email: "ciherraiz@gmail.com"
+      name: "ciherraiz"
+      password: "$2b$12$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+cookie:
+  name: "streamlit_auth_cookie"
+  key: "clave_secreta_123"     # cámbiala por otra cadena
+  expiry_days: 30
+
+preauthorized:
+  emails: []

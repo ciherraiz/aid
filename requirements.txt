@@ -1,4 +1,5 @@
 streamlit
+streamlit-authenticator
 jira
 pandas
 python-dotenv
