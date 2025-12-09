@@ -16,10 +16,10 @@ class JiraClient:
     def __init__(self):
         jira_url = get_key("JIRA_URL")
         jira_user = get_key("JIRA_USER")
-        jira_token = get_key("JIRA_TOKEN")
+        jira_token = get_key("JIRA_PASS")
 
-        if not jira_url or not jira_user or not jira_token:
-            raise ValueError("Faltan variables de entorno para conectar a Jira")
+        if not jira_url or not jira_user:
+            raise ValueError("Error en configuración de autenticación")
 
         self.jira = JIRA(
             server=jira_url,

@@ -15,3 +15,8 @@ jira = load_jira_client()
 
 # Sidebar
 st.sidebar.header("Opciones")
+
+data = jira.get_projects_by_category('PROYECTOS AREA IMPLANTACIONES')
+df = pd.DataFrame(data)
+
+st.dataframe(df, use_container_width=True)
