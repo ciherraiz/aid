@@ -27,7 +27,11 @@ class JiraClient:
         )
 
     def get_projects_by_category(self, category_name):
-        """Obtiene proyectos filtrados por categoría."""
         all_projects = self.jira.projects()
-        return [p for p in all_projects if getattr(p, "projectCategory", None) and 
+        return [
+        {   "id": p.id,
+            "key": p.key,
+            "name": p.name
+        } 
+        for p in all_projects if getattr(p, "projectCategory", None) and 
                 p.projectCategory.name == category_name]
