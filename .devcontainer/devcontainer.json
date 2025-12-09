@@ -1,0 +1,13 @@
+{
+  "name": "Python Streamlit Jira Dev",
+  "image": "mcr.microsoft.com/devcontainers/python:3.13-bullseye",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "postCreateCommand": "pip install -r requirements.txt"
+}
