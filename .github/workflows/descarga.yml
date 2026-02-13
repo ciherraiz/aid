@@ -1,0 +1,35 @@
+name: Actualizar Google Sheets Diariamente
+
+# Ejecutar todos los días a las 9:00 AM UTC
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Minuto Hora Día Mes Día-de-semana
+  
+  # También permite ejecutar manualmente desde GitHub
+  workflow_dispatch:
+
+jobs:
+  actualizar-datos:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v3
+    
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Instalar dependencias
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .
+    
+    - name: Ejecutar script de actualización
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+      run: |
+        python scripts/diario.py
