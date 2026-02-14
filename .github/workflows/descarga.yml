@@ -1,9 +1,9 @@
-name: Actualizar Google Sheets Diariamente
+name: Descarga issues JIRA
 
 # Ejecutar todos los días a las 9:00 AM UTC
 on:
   schedule:
-    - cron: '0 9 * * *'  # Minuto Hora Día Mes Día-de-semana
+    - cron: '0 8 * * *'  # Minuto Hora Día Mes Día-de-semana
   
   # También permite ejecutar manualmente desde GitHub
   workflow_dispatch:
