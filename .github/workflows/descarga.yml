@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  actualizar-datos:
+  descarga-jiras:
     runs-on: ubuntu-latest
     
     steps:
