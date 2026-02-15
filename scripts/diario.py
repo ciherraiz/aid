@@ -114,7 +114,11 @@ def actualizar_hoja(df, spreadsheet_id, hoja_nombre):
 
 def main():   
 
-    jira = JiraAID()
+    jira_url = os.environ.get('JIRA_URL')
+    jira_user = os.environ.get('JIRA_USER')
+    jira_pass = os.environ.get('JIRA_PASS')
+
+    jira = JiraAID(jira_url, jira_user, jira_pass)
 
 
     df_issues = jira.get_issues_projects()

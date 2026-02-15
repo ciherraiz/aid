@@ -7,11 +7,8 @@ PROJECT_CATEGORY = 'PROYECTOS AREA IMPLANTACIONES'
     
 class JiraAID:
 
-    def __init__(self):
-        jira_url = os.environ.get('JIRA_URL')
-        jira_user = os.environ.get('JIRA_USER')
-        jira_pass = os.environ.get('JIRA_PASS')
-
+    def __init__(self, jira_url, jira_user, jira_pass):
+        
         if not jira_url or not jira_user:
             raise ValueError("Error en configuración de autenticación")
 
