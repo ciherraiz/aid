@@ -113,15 +113,11 @@ def actualizar_hoja(df, spreadsheet_id, hoja_nombre):
     print(f"✓ Datos actualizados en Google Sheets: {hoja_nombre}")
 
 def main():   
-    IDSOLUCION = 'IPORTALES'
-    PROJECT_CATEGORY = 'PROYECTOS AREA IMPLANTACIONES'
 
-    #analizador = JiraClient(parametro1="valor_ejemplo")
     jira = JiraAID()
-    projects = jira.get_projects_by_category(PROJECT_CATEGORY)
-    jql =f"project in ({','.join([d['key'] for d in projects])}) ORDER BY Clasificación ASC"
 
-    df_issues = jira.get_issues_projects(jql)
+
+    df_issues = jira.get_issues_projects()
     
     SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
     

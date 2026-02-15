@@ -3,32 +3,7 @@ import os
 import pandas as pd
 from jira import JIRA
 
-class JiraClient:
-    """Clase ejemplo que genera un DataFrame con datos"""
-    
-    def __init__(self, parametro1=None):
-        self.parametro1 = parametro1
-        
-    def generar_reporte(self):
-        """
-        Método que devuelve un DataFrame con datos
-        Este es tu método que quieres ejecutar diariamente
-        """
-        # Ejemplo: generar datos ficticios
-        datos = {
-            'fecha': [datetime.now().strftime('%Y-%m-%d')],
-            'metrica_1': [42],
-            'metrica_2': [85],
-            'observaciones': ['Datos del día']
-        }
-        
-        df = pd.DataFrame(datos)
-        return df
-    
-    def procesar_datos(self, df):
-        """Método adicional para procesamiento"""
-        # Aquí tu lógica personalizada
-        return df
+PROJECT_CATEGORY = 'PROYECTOS AREA IMPLANTACIONES'
     
 class JiraAID:
 
@@ -104,7 +79,11 @@ class JiraAID:
         return d
 
 
-    def get_issues_projects(self, jql: str):
+    def get_issues_projects(self):
+
+        projects = self.get_projects_by_category(PROJECT_CATEGORY)
+        jql =f"project in ({','.join([d['key'] for d in projects])}) ORDER BY Clasificación ASC"
+        
         self.issues = self.get_issues(jql)
         df = self.issues_to_df(self.issues)
         self.df_issues = self.clean_issues(df)
@@ -129,6 +108,8 @@ class JiraAID:
 
 
     def get_issues(self, jql: str):
+
+        
         campos_deseados = ['key',
                            'summary',
                            'status',

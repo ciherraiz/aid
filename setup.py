@@ -5,7 +5,10 @@ setup(
     version='0.1.0',
     packages=find_packages(),
     install_requires=[
-        'pandas>=1.3.0',
+        'pandas',
+        'jira',
+        'gspread',
+        'oauth2client'
     ],
     author='flaco',
     description='aid',
