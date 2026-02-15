@@ -154,7 +154,6 @@ class JiraAID:
         start_at = 0
         max_results = 50
 
-        #pbar = tqdm(desc="Downloading issues...")
 
         while True:
             batch = self.jira.search_issues(jql, expand='names', fields=campos_deseados, startAt=start_at, maxResults=max_results)
@@ -164,11 +163,8 @@ class JiraAID:
                 break
 
             start_at += len(batch)
-            #pbar.update(len(batch))
 
-        #pbar.close()
 
-        print(f'{len(issues)} issues loaded')
         return issues
 
     def issues_to_df(self, issues):
@@ -228,7 +224,7 @@ class JiraAID:
         cols_bloqueo = ['CLAVE_BLOQUEO','TITULO_BLOQUEO','INICIO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'ACTUALIZACION_BLOQUEO']
         df_relaciones = pd.DataFrame(self.relations)
         df_relaciones_bloqueos = df_relaciones[df_relaciones['RELACION']=='Es bloqueada por']
-        #print(df_relaciones_bloqueos)
+
         bloqueos = df_relaciones_bloqueos['CLAVE_DESTINO'].unique().tolist() #issues bloqueantes
 
         claves_issues = self.df_issues['CLAVE'].unique().tolist()
@@ -272,7 +268,6 @@ class JiraAID:
                     relations.append({'CLAVE_ORIGEN': issue.key,  'RELACION':link.type.inward, 'CLAVE_DESTINO': link.inwardIssue.key})
 
         self.relations = relations
-        print(f'{len(self.relations)} relations loaded')
 
     data = []
     """

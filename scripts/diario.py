@@ -2,6 +2,9 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
+import math
+import pandas as pd
+import numpy as np
 from aid import JiraAID
 
 def conectar_google_sheets():
@@ -22,7 +25,61 @@ def conectar_google_sheets():
     client = gspread.authorize(credentials)
     return client
 
-def actualizar_hoja(df, spreadsheet_id, hoja_nombre='Datos'):
+def convertir_para_sheets(df):
+    """
+    Convierte un DataFrame a formatos 100% compatibles con Google Sheets
+    Elimina NaN, inf, -inf, NaT y otros valores problemáticos
+    """
+    df_copy = df.copy()
+    
+    for col in df_copy.columns:
+        dtype = df_copy[col].dtype
+        
+        # 1. Convertir datetime/Timestamp a string
+        if pd.api.types.is_datetime64_any_dtype(dtype):
+            df_copy[col] = df_copy[col].apply(
+                lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) else ''
+            )
+        
+        # 2. Convertir timedelta
+        elif pd.api.types.is_timedelta64_dtype(dtype):
+            df_copy[col] = df_copy[col].apply(
+                lambda x: str(x) if pd.notna(x) else ''
+            )
+        
+        # 3. Convertir booleanos
+        elif pd.api.types.is_bool_dtype(dtype):
+            df_copy[col] = df_copy[col].apply(
+                lambda x: 'TRUE' if x is True else ('FALSE' if x is False else '')
+            )
+        
+        # 4. Convertir numéricos (aquí está el problema principal)
+        elif pd.api.types.is_numeric_dtype(dtype):
+            def limpiar_numero(x):
+                # Verificar si es NaN, None, inf o -inf
+                if pd.isna(x) or x is None:
+                    return ''
+                if isinstance(x, float) and (math.isinf(x) or math.isnan(x)):
+                    return ''
+                return x
+            
+            df_copy[col] = df_copy[col].apply(limpiar_numero)
+        
+        # 5. Convertir objetos/strings
+        else:
+            df_copy[col] = df_copy[col].apply(
+                lambda x: str(x) if pd.notna(x) and x is not None and x != '' else ''
+            )
+    
+    # Reemplazo final de cualquier NaN que haya quedado
+    df_copy = df_copy.replace([np.nan, np.inf, -np.inf], '')
+    
+    # Convertir None a string vacío
+    df_copy = df_copy.fillna('')
+    
+    return df_copy
+
+def actualizar_hoja(df, spreadsheet_id, hoja_nombre):
     """
     Actualiza una hoja de Google Sheets con el DataFrame
     
@@ -46,9 +103,12 @@ def actualizar_hoja(df, spreadsheet_id, hoja_nombre='Datos'):
             cols=20
         )
     
-    # Opción 1: Sobrescribir todo
+    
+    df_adaptado = convertir_para_sheets(df)
+
+    # Sobrescribir todo
     worksheet.clear()
-    worksheet.update([df.columns.values.tolist()] + df.values.tolist())
+    worksheet.update([df_adaptado.columns.values.tolist()] + df_adaptado.values.tolist())
     
     print(f"✓ Datos actualizados en Google Sheets: {hoja_nombre}")
 
@@ -59,17 +119,14 @@ def main():
     #analizador = JiraClient(parametro1="valor_ejemplo")
     jira = JiraAID()
     projects = jira.get_projects_by_category(PROJECT_CATEGORY)
-    #jql =f"project in ({','.join([d['key'] for d in projects])}) and status != Closed ORDER BY Clasificación ASC"
-    jql = f"project in ({IDSOLUCION}) and status != Closed ORDER BY Clasificación ASC"
+    jql =f"project in ({','.join([d['key'] for d in projects])}) ORDER BY Clasificación ASC"
+
     df_issues = jira.get_issues_projects(jql)
-    
-    print(f"✓ DataFrame generado con {len(df_issues)} filas")
     
     SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
     
     actualizar_hoja(df_issues, SPREADSHEET_ID, hoja_nombre='ISSUES')
     
-    print("✓ Proceso completado exitosamente")
 
 if __name__ == '__main__':
     main()
