@@ -2,7 +2,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
-from aid import JiraClient
+from aid import JiraAID
 
 def conectar_google_sheets():
     """Establece conexión con Google Sheets usando credenciales"""
@@ -52,17 +52,22 @@ def actualizar_hoja(df, spreadsheet_id, hoja_nombre='Datos'):
     
     print(f"✓ Datos actualizados en Google Sheets: {hoja_nombre}")
 
-def main():    
-    analizador = JiraClient(parametro1="valor_ejemplo")
+def main():   
+    IDSOLUCION = 'IPORTALES'
+    PROJECT_CATEGORY = 'PROYECTOS AREA IMPLANTACIONES'
+
+    #analizador = JiraClient(parametro1="valor_ejemplo")
+    jira = JiraAID()
+    projects = jira.get_projects_by_category(PROJECT_CATEGORY)
+    #jql =f"project in ({','.join([d['key'] for d in projects])}) and status != Closed ORDER BY Clasificación ASC"
+    jql = f"project in ({IDSOLUCION}) and status != Closed ORDER BY Clasificación ASC"
+    df_issues = jira.get_issues_projects(jql)
     
+    print(f"✓ DataFrame generado con {len(df_issues)} filas")
     
-    df = analizador.generar_reporte()
-    print(f"✓ DataFrame generado con {len(df)} filas")
+    SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
     
-    SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID', 'TU_ID_AQUI')
-    
-    
-    actualizar_hoja(df, SPREADSHEET_ID, hoja_nombre='Reporte Diario')
+    actualizar_hoja(df_issues, SPREADSHEET_ID, hoja_nombre='ISSUES')
     
     print("✓ Proceso completado exitosamente")
 
