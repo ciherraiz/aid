@@ -118,8 +118,6 @@ def main():
     jira_user = os.environ.get('JIRA_USER')
     jira_pass = os.environ.get('JIRA_PASS')
 
-    print(jira_url, jira_user)
-
     jira = JiraAID(jira_url, jira_user, jira_pass)
 
 

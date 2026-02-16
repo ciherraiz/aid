@@ -3,7 +3,7 @@ name: Descarga issues JIRA
 # Ejecutar todos los días a las 9:00 AM UTC
 on:
   schedule:
-    - cron: '0 8 * * *'  # Minuto Hora Día Mes Día-de-semana
+    - cron: '0 3 * * *'  # Minuto Hora Día Mes Día-de-semana
   
   # También permite ejecutar manualmente desde GitHub
   workflow_dispatch:
@@ -31,5 +31,8 @@ jobs:
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        JIRA_URL: ${{ secrets.JIRA_URL }}
+        JIRA_USER: ${{ secrets.JIRA_USER }}
+        JIRA_PASS: ${{ secrets.JIRA_PASS }}
       run: |
         python scripts/diario.py
