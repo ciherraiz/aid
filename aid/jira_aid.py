@@ -196,7 +196,7 @@ class JiraAID:
 
         df['ESTADO_AGRUPADO'] = (
             df['ESTADO']
-            .map({'Abierta': 'BACKLOG', 'Cerrada': 'CERRADA', 'Pdte Información': 'BLOQUEADA'})
+            .map({'Abierta': 'BACKLOG', 'Cerrada': 'CERRADA', 'Pdte. Información': 'BLOQUEADA'})
             .fillna("EN_CURSO")
         )
         return df
