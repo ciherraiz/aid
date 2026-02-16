@@ -58,7 +58,7 @@ class JiraAID:
         d["Status"] = issue.fields.status.name
         d["Issue Type"] = issue.fields.issuetype.name
 
-        #if issue.key == 'IGUINE-11':
+
         #    print(issue.raw["fields"].items())
 
         for fid, val in issue.raw["fields"].items():
@@ -87,12 +87,13 @@ class JiraAID:
         self.extract_relations()
 
         return self.df_issues[['SOLUCION',
+                            'CENTRO',
                             'CLAVE',
+                            'FASE',
                             'TITULO',
                             'DESCRIPCION',
                             'INICIO', 'FIN',
                             'ACTUALIZACION',
-                            'CENTRO',
                             'ESTADO',
                             'CLAVE_MCMI',
                             'TIPO',
@@ -186,6 +187,8 @@ class JiraAID:
         .apply(pd.to_datetime, errors="coerce", utc=True)
         .apply(lambda x: x.dt.tz_localize(None))
         )
+
+        df['DIAS'] = (df['FIN'] - df['INICIO']).dt.days
 
         df['HBS_ESTIMADAS'] = df['HBS_ESTIMADAS'].astype(float) / 3600
         df['HBS_RESTANTES'] = df['HBS_RESTANTES'].astype(float) / 3600
