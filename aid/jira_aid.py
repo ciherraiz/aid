@@ -102,7 +102,8 @@ class JiraAID:
                             'HBS_RESTANTES',
                             'ESTADO_AGRUPADO',
                             'RESPONSABLE_SERVICIO',
-                            'TIPO_SERVICIO']].copy()
+                            'TIPO_SERVICIO',
+                            'DIAS']].copy()
 
 
     def get_issues(self, jql: str):
