@@ -86,6 +86,9 @@ class JiraAID:
         self.df_issues = self.clean_issues(df)
         self.extract_relations()
 
+        self.df_milestones = self.get_milestone_data()
+
+
         return self.df_issues[['SOLUCION',
                             'CENTRO',
                             'CLAVE',
@@ -103,7 +106,8 @@ class JiraAID:
                             'ESTADO_AGRUPADO',
                             'RESPONSABLE_SERVICIO',
                             'TIPO_SERVICIO',
-                            'DIAS']].copy()
+                            'DIAS',
+                            'PRIORIDAD']].copy()
 
 
     def get_issues(self, jql: str):
@@ -127,7 +131,8 @@ class JiraAID:
                            'customfield_12303', # Fecha Fin
                            'issuelinks',  # Enlaces a otras issues
                            'customfield_16100',  # (R) Responsable
-                           'customfield_16000' # Tipo de servicio
+                           'customfield_16000', # Tipo de servicio
+                           'priority'
                            ]
 
         issues = []
@@ -173,7 +178,8 @@ class JiraAID:
                     'Estimadas': 'HBS_ESTIMADAS',
                     'Restantes': 'HBS_RESTANTES',
                     '(R) Responsable': 'RESPONSABLE_SERVICIO',
-                    'Tipo de servicio': 'TIPO_SERVICIO'}, inplace=True)
+                    'Tipo de servicio': 'TIPO_SERVICIO',
+                    'Prioridad': 'PRIORIDAD'}, inplace=True)
 
         return df
 
@@ -204,8 +210,7 @@ class JiraAID:
 
     def get_blocks_projects(self):
         cols_bloqueo = ['CLAVE_BLOQUEO','TITULO_BLOQUEO','INICIO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'ACTUALIZACION_BLOQUEO']
-        df_relaciones = pd.DataFrame(self.relations)
-        df_relaciones_bloqueos = df_relaciones[df_relaciones['RELACION']=='Es bloqueada por']
+        df_relaciones_bloqueos = self.df_relations[self.df_relations['RELACION']=='Es bloqueada por']
 
         bloqueos = df_relaciones_bloqueos['CLAVE_DESTINO'].unique().tolist() #issues bloqueantes
 
@@ -214,8 +219,8 @@ class JiraAID:
 
         bloqueos_internos = list(set(bloqueos) - set(bloqueos_externos))
 
-        print('Bloqueos fuera de proyectos AID', bloqueos_externos)
-        print('Bloqueos en proyectos AID', bloqueos_internos)
+        #print('Bloqueos fuera de proyectos AID', bloqueos_externos)
+        #print('Bloqueos en proyectos AID', bloqueos_internos)
 
         df_bloqueos_internos = self.df_issues[self.df_issues['CLAVE'].isin(bloqueos_internos)].copy()
         df_bloqueos_internos.rename(columns={'CLAVE': 'CLAVE_BLOQUEO', 'TITULO': 'TITULO_BLOQUEO', 'INICIO': 'INICIO_BLOQUEO', 'ACTUALIZACION': 'ACTUALIZACION_BLOQUEO', 'DESCRIPCION': 'DESCRIPCION_BLOQUEO'}, inplace=True)
@@ -234,12 +239,13 @@ class JiraAID:
 
         df_bloqueos = df_bloqueos.merge(df_relaciones_bloqueos, left_on='CLAVE_BLOQUEO', right_on = 'CLAVE_DESTINO', how='left') # completa datos issue origen
 
-        df_bloqueos = df_bloqueos.merge(self.df_issues[['SOLUCION', 'CLAVE', 'CENTRO', 'HBS_RESTANTES']], left_on='CLAVE_ORIGEN', right_on='CLAVE', how='left')
+        df_total_bloqueadas = self.df_issues[self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA'][['SOLUCION', 'CLAVE', 'CENTRO', 'HBS_RESTANTES', 'ESTADO', 'PRIORIDAD']]
+        
+        df_bloqueos = df_total_bloqueadas.merge(df_bloqueos, left_on='CLAVE', right_on='CLAVE_ORIGEN', how='left')
+        #df_bloqueos = df_bloqueos.merge(self.df_issues[['SOLUCION', 'CLAVE', 'CENTRO', 'HBS_RESTANTES', 'ESTADO', 'PRIORIDAD']], left_on='CLAVE_ORIGEN', right_on='CLAVE', how='left')
 
 
-        return df_bloqueos[['SOLUCION', 'CLAVE', 'CLAVE_BLOQUEO', 'TITULO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'INICIO_BLOQUEO', 'CENTRO', 'HBS_RESTANTES']]
-
-        return df
+        return df_bloqueos[['SOLUCION', 'CLAVE', 'ESTADO', 'PRIORIDAD', 'CLAVE_BLOQUEO', 'TITULO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'INICIO_BLOQUEO', 'CENTRO', 'HBS_RESTANTES']]
 
     def extract_relations(self):
         relations = []
@@ -249,9 +255,74 @@ class JiraAID:
                 if hasattr(link, "inwardIssue"):
                     relations.append({'CLAVE_ORIGEN': issue.key,  'RELACION':link.type.inward, 'CLAVE_DESTINO': link.inwardIssue.key})
 
-        self.relations = relations
+        self.df_relations = pd.DataFrame(relations)
 
     data = []
+
+    def pivot_by_phase(self, df, columna_agregacion):
+        """
+        Pivota un dataframe agrupando por SOLUCION y CENTRO, creando columnas para cada FASE.
+        
+        Parámetros:
+        -----------
+        df : pd.DataFrame
+            DataFrame con las columnas SOLUCION, CENTRO, FASE y la columna a agregar
+        columna_agregacion : str
+            Nombre de la columna cuyos valores se sumarán (por defecto 'HBS_ESTIMADAS')
+        
+        Retorna:
+        --------
+        pd.DataFrame
+            DataFrame pivotado con SOLUCION, CENTRO y una columna por cada fase
+        """
+        # Lista de fases en el orden deseado
+        fases_ordenadas = ['APS', 'RP', 'PRE', 'IMP', 'ARR', 'CON', 'EXT', 'PN3']
+        
+        # Crear una copia del dataframe y asegurar que la columna de agregación sea numérica
+        df_limpio = df.copy()
+        df_limpio[columna_agregacion] = pd.to_numeric(df_limpio[columna_agregacion], errors='coerce').fillna(0)
+        
+        # Crear la tabla pivotada
+        df_pivotado = df_limpio.pivot_table(
+            index=['SOLUCION', 'CENTRO'],
+            columns='FASE',
+            values=columna_agregacion,
+            aggfunc='sum',
+            fill_value=0
+        )
+        
+        # Reindexar las columnas para asegurar el orden y que existan todas las fases
+        df_pivotado = df_pivotado.reindex(columns=fases_ordenadas, fill_value=0)
+        
+        # Resetear el índice para que SOLUCION y CENTRO sean columnas
+        df_pivotado = df_pivotado.reset_index()
+        
+        # Aplanar el nombre de las columnas (eliminar el nivel jerárquico)
+        df_pivotado.columns.name = None
+        
+        # Convertir todas las columnas de fases a tipo numérico y rellenar NaN con 0
+        for fase in fases_ordenadas:
+            df_pivotado[fase] = pd.to_numeric(df_pivotado[fase], errors='coerce').fillna(0).astype(int)
+        
+        return df_pivotado
+    
+    def get_milestone_data(self):
+        cols = ['SOLUCION', 'CENTRO', 'CLAVE', 'FASE', 'HBS_ESTIMADAS', 'DIAS']
+        df_hitos = self.df_issues[self.df_issues['SUBTIPO']=='Hito'][cols]
+        df_disponibles = self.df_issues[(self.df_issues['ESTADO_AGRUPADO']=='BACKLOG') | (self.df_issues['ESTADO_AGRUPADO']=='EN_CURSO')][cols]
+        df_bloqueadas = self.df_issues[self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA'][cols]
+        df_hitos_plan = self.pivot_by_phase(df_hitos, 'HBS_ESTIMADAS')
+        df_hitos_disp = self.pivot_by_phase(df_disponibles, 'HBS_ESTIMADAS')
+        df_hitos_block = self.pivot_by_phase(df_bloqueadas, 'HBS_ESTIMADAS')
+
+        df_hitos_total = pd.merge(df_hitos_plan, df_hitos_disp, on=['SOLUCION', 'CENTRO'], how='left', suffixes=('', '_DISP'))
+        df_hitos_total = pd.merge(df_hitos_total, df_hitos_block, on=['SOLUCION', 'CENTRO'], how='left', suffixes=('', '_BLK'))
+
+        df_hitos_total.fillna(0, inplace=True)
+
+        return df_hitos_total
+
+
     """
     def get_comments(self, issues):
             for issue in issues:

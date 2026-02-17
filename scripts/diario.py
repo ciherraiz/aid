@@ -110,7 +110,7 @@ def actualizar_hoja(df, spreadsheet_id, hoja_nombre):
     worksheet.clear()
     worksheet.update([df_adaptado.columns.values.tolist()] + df_adaptado.values.tolist())
     
-    print(f"✓ Datos actualizados en Google Sheets: {hoja_nombre}")
+    print(f"✓ Datos actualizados en Google Sheets: {hoja_nombre} ({len(df_adaptado)} registros)")
 
 def main():   
 
@@ -122,10 +122,13 @@ def main():
 
 
     df_issues = jira.get_issues_projects()
+    df_blocks = jira.get_blocks_projects()
     
     SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
     
-    actualizar_hoja(df_issues, SPREADSHEET_ID, hoja_nombre='ISSUES')
+    actualizar_hoja(df_issues, SPREADSHEET_ID, hoja_nombre='REGISTROS')
+    actualizar_hoja(jira.df_milestones, SPREADSHEET_ID, hoja_nombre='HITOS')
+    actualizar_hoja(df_blocks, SPREADSHEET_ID, hoja_nombre='BLOQUEOS')
     
 
 if __name__ == '__main__':
