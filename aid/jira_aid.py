@@ -262,6 +262,21 @@ class JiraAID:
         # Expandir dataframe (explode) para tener una fila por incidencia y mes
         df_exp = df_hbs_prorr.explode("MES")
 
+        # Calcular inicio y fin real dentro de cada mes
+        df_exp["MES_INICIO_TS"] = df_exp["MES"].dt.to_timestamp().dt.normalize()
+        df_exp["MES_FIN_TS"] = (
+            df_exp["MES"].dt.to_timestamp(how="end").dt.normalize()
+        )
+
+        # Convertir periodo a timestamp (inicio y fin de mes)
+        df_exp["INICIO_MES_REAL"] = df_exp[["INICIO_PRORRATEO", "MES_INICIO_TS"]].max(axis=1)
+        df_exp["FIN_MES_REAL"] = df_exp[["FIN_PRORRATEO", "MES_FIN_TS"]].min(axis=1)
+
+        # Días efectivos en el mes
+        df_exp["DIAS_EN_MES"] = (
+            (df_exp["FIN_MES_REAL"] - df_exp["INICIO_MES_REAL"]).dt.days + 1
+        )
+
         return df_exp
 
 
