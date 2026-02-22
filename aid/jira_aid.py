@@ -207,45 +207,65 @@ class JiraAID:
         )
         return df
 
-
     def get_blocks_projects(self):
-        cols_bloqueo = ['CLAVE_BLOQUEO','TITULO_BLOQUEO','INICIO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'ACTUALIZACION_BLOQUEO']
+        cols_bloqueo = ['CLAVE_BLOQUEO','TITULO_BLOQUEO','INICIO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'ACTUALIZACION_BLOQUEO', 'RESPONSABLE_BLOQUEO', 'SERVICIO_BLOQUEO']
         df_relaciones_bloqueos = self.df_relations[self.df_relations['RELACION']=='Es bloqueada por']
 
         bloqueos = df_relaciones_bloqueos['CLAVE_DESTINO'].unique().tolist() #issues bloqueantes
 
-        claves_issues = self.df_issues['CLAVE'].unique().tolist()
-        bloqueos_externos = [x for x in bloqueos if x not in claves_issues]
+        if bloqueos:
+            jql = f'key in ({",".join(bloqueos)})'
+            issues_bloqueos = self.get_issues(jql)
 
-        bloqueos_internos = list(set(bloqueos) - set(bloqueos_externos))
-
-        #print('Bloqueos fuera de proyectos AID', bloqueos_externos)
-        #print('Bloqueos en proyectos AID', bloqueos_internos)
-
-        df_bloqueos_internos = self.df_issues[self.df_issues['CLAVE'].isin(bloqueos_internos)].copy()
-        df_bloqueos_internos.rename(columns={'CLAVE': 'CLAVE_BLOQUEO', 'TITULO': 'TITULO_BLOQUEO', 'INICIO': 'INICIO_BLOQUEO', 'ACTUALIZACION': 'ACTUALIZACION_BLOQUEO', 'DESCRIPCION': 'DESCRIPCION_BLOQUEO'}, inplace=True)
-        df_bloqueos_internos = df_bloqueos_internos[cols_bloqueo]
-
-        if len(bloqueos_externos) > 0:
-            jql = f'key in ({",".join(bloqueos_externos)})'
-            issues_bloqueos_externos = self.get_issues(jql)
-            df_bloqueos_externos = self.issues_to_df(issues_bloqueos_externos)
-            df_bloqueos_externos.rename(columns={'CLAVE': 'CLAVE_BLOQUEO', 'TITULO': 'TITULO_BLOQUEO', 'Fecha de Creación': 'INICIO_BLOQUEO', 'ACTUALIZACION': 'ACTUALIZACION_BLOQUEO', 'DESCRIPCION': 'DESCRIPCION_BLOQUEO'}, inplace=True)
-            df_bloqueos_externos = df_bloqueos_externos[cols_bloqueo]
+            df_bloqueos = self.issues_to_df(issues_bloqueos)
+            df_bloqueos.rename(columns={'CLAVE': 'CLAVE_BLOQUEO', 'TITULO': 'TITULO_BLOQUEO', 'Fecha de Creación': 'INICIO_BLOQUEO', 'ACTUALIZACION': 'ACTUALIZACION_BLOQUEO', 'DESCRIPCION': 'DESCRIPCION_BLOQUEO', 'RESPONSABLE_SERVICIO': 'RESPONSABLE_BLOQUEO', 'TIPO_SERVICIO': 'SERVICIO_BLOQUEO'}, inplace=True)
+            df_bloqueos = df_bloqueos[cols_bloqueo]
         else:
-            df_bloqueos_externos = pd.DataFrame(columns=cols_bloqueo)
-
-        df_bloqueos = pd.concat([df_bloqueos_internos[cols_bloqueo], df_bloqueos_externos[cols_bloqueo]])
+            df_bloqueos = pd.DataFrame(columns=cols_bloqueo)
 
         df_bloqueos = df_bloqueos.merge(df_relaciones_bloqueos, left_on='CLAVE_BLOQUEO', right_on = 'CLAVE_DESTINO', how='left') # completa datos issue origen
 
         df_total_bloqueadas = self.df_issues[self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA'][['SOLUCION', 'CLAVE', 'CENTRO', 'HBS_RESTANTES', 'ESTADO', 'PRIORIDAD']]
         
         df_bloqueos = df_total_bloqueadas.merge(df_bloqueos, left_on='CLAVE', right_on='CLAVE_ORIGEN', how='left')
-        #df_bloqueos = df_bloqueos.merge(self.df_issues[['SOLUCION', 'CLAVE', 'CENTRO', 'HBS_RESTANTES', 'ESTADO', 'PRIORIDAD']], left_on='CLAVE_ORIGEN', right_on='CLAVE', how='left')
 
 
-        return df_bloqueos[['SOLUCION', 'CLAVE', 'ESTADO', 'PRIORIDAD', 'CLAVE_BLOQUEO', 'TITULO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'INICIO_BLOQUEO', 'CENTRO', 'HBS_RESTANTES']]
+        return df_bloqueos[['SOLUCION', 'CLAVE', 'ESTADO', 'PRIORIDAD', 'CLAVE_BLOQUEO', 'TITULO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'INICIO_BLOQUEO', 'CENTRO', 'HBS_RESTANTES', 'RESPONSABLE_BLOQUEO', 'SERVICIO_BLOQUEO']]
+
+
+    def calculate_hbs (self): 
+
+        df_hbs_prorr = self.df_issues[(self.df_issues['TIPO'] == 'Tarea general') & (self.df_issues['SUBTIPO'] != 'Hito') & ((self.df_issues['INICIO'].notna()) & (self.df_issues['FIN'].notna())) & (self.df_issues['HBS_ESTIMADAS'].notna())].copy()
+
+        df_hbs_prorr = df_hbs_prorr[['SOLUCION', 'CLAVE', 'INICIO', 'FIN', 'ESTADO_AGRUPADO', 'HBS_ESTIMADAS', 'HBS_RESTANTES']]
+
+        df_hbs_prorr["INICIO_NORM"] = df_hbs_prorr["INICIO"].dt.normalize()
+        df_hbs_prorr["FIN_NORM"] = df_hbs_prorr["FIN"].dt.normalize()
+
+        # Ajustar inicio al máximo entre fecha original y HOY
+        hoy = pd.Timestamp.now().normalize()
+        df_hbs_prorr["INICIO_PRORRATEO"] = df_hbs_prorr["INICIO_NORM"].clip(lower=hoy)
+        df_hbs_prorr["FIN_PRORRATEO"] = df_hbs_prorr["FIN_NORM"]
+
+        # Calcular duración total en días (incluyendo ambos extremos)
+        df_hbs_prorr["DIAS_TOTALES"] = (df_hbs_prorr["FIN_PRORRATEO"] - df_hbs_prorr["INICIO_PRORRATEO"]).dt.days + 1
+
+        df_hbs_prorr["MES_INICIO"] = df_hbs_prorr["INICIO_PRORRATEO"].dt.to_period("M")
+        df_hbs_prorr["MES_FIN"] = df_hbs_prorr["FIN_PRORRATEO"].dt.to_period("M")
+
+        # Generar rango mensual por cada incidencia
+        df_hbs_prorr["MES"] = df_hbs_prorr.apply(
+            lambda x: pd.period_range(x["MES_INICIO"], x["MES_FIN"], freq="M"),
+            axis=1
+        )
+
+        # Expandir dataframe (explode) para tener una fila por incidencia y mes
+        df_exp = df_hbs_prorr.explode("MES")
+
+        return df_exp
+
+
+
 
     def extract_relations(self):
         relations = []
@@ -308,15 +328,12 @@ class JiraAID:
     
     def get_milestone_data(self):
         cols = ['SOLUCION', 'CENTRO', 'CLAVE', 'FASE', 'HBS_ESTIMADAS', 'DIAS']
-        df_hitos = self.df_issues[self.df_issues['SUBTIPO']=='Hito'][cols]
         df_disponibles = self.df_issues[(self.df_issues['ESTADO_AGRUPADO']=='BACKLOG') | (self.df_issues['ESTADO_AGRUPADO']=='EN_CURSO')][cols]
         df_bloqueadas = self.df_issues[self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA'][cols]
-        df_hitos_plan = self.pivot_by_phase(df_hitos, 'HBS_ESTIMADAS')
         df_hitos_disp = self.pivot_by_phase(df_disponibles, 'HBS_ESTIMADAS')
         df_hitos_block = self.pivot_by_phase(df_bloqueadas, 'HBS_ESTIMADAS')
 
-        df_hitos_total = pd.merge(df_hitos_plan, df_hitos_disp, on=['SOLUCION', 'CENTRO'], how='left', suffixes=('', '_DISP'))
-        df_hitos_total = pd.merge(df_hitos_total, df_hitos_block, on=['SOLUCION', 'CENTRO'], how='left', suffixes=('', '_BLK'))
+        df_hitos_total = pd.merge(df_hitos_disp, df_hitos_block, on=['SOLUCION', 'CENTRO'], how='left', suffixes=('_DISP', '_BLK'))
 
         df_hitos_total.fillna(0, inplace=True)
 
