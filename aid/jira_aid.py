@@ -277,6 +277,19 @@ class JiraAID:
             (df_exp["FIN_MES_REAL"] - df_exp["INICIO_MES_REAL"]).dt.days + 1
         )
 
+        # Prorratear horas
+        df_exp["HBS_ESTIMADAS_PRORR"] = (
+            df_exp["HBS_ESTIMADAS"] *
+            df_exp["DIAS_EN_MES"] /
+            df_exp["DIAS_TOTALES"]
+        )
+
+        df_exp["HBS_RESTANTES_PRORR"] = (
+            df_exp["HBS_RESTANTES"] *
+            df_exp["DIAS_EN_MES"] /
+            df_exp["DIAS_TOTALES"]
+        )
+
         return df_exp
 
 
