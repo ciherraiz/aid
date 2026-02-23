@@ -228,71 +228,60 @@ class JiraAID:
         df_total_bloqueadas = self.df_issues[self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA'][['SOLUCION', 'CLAVE', 'CENTRO', 'HBS_RESTANTES', 'ESTADO', 'PRIORIDAD']]
         
         df_bloqueos = df_total_bloqueadas.merge(df_bloqueos, left_on='CLAVE', right_on='CLAVE_ORIGEN', how='left')
+        df_bloqueos['INICIO_BLOQUEO'] = pd.to_datetime(df_bloqueos["INICIO_BLOQUEO"], errors="coerce").dt.normalize()
+        df_bloqueos['DIAS'] = (pd.to_datetime('today', utc=True).normalize() - df_bloqueos['INICIO_BLOQUEO']).dt.days
 
 
-        return df_bloqueos[['SOLUCION', 'CLAVE', 'ESTADO', 'PRIORIDAD', 'CLAVE_BLOQUEO', 'TITULO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'INICIO_BLOQUEO', 'CENTRO', 'HBS_RESTANTES', 'RESPONSABLE_BLOQUEO', 'SERVICIO_BLOQUEO']]
+        return df_bloqueos[['SOLUCION', 'CLAVE', 'ESTADO', 'PRIORIDAD', 'CLAVE_BLOQUEO', 'TITULO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'INICIO_BLOQUEO', 'CENTRO', 'HBS_RESTANTES', 'RESPONSABLE_BLOQUEO', 'SERVICIO_BLOQUEO', 'DIAS']]
 
 
     def calculate_hbs (self): 
 
-        df_hbs_prorr = self.df_issues[(self.df_issues['TIPO'] == 'Tarea general') & (self.df_issues['SUBTIPO'] != 'Hito') & ((self.df_issues['INICIO'].notna()) & (self.df_issues['FIN'].notna())) & (self.df_issues['HBS_ESTIMADAS'].notna())].copy()
+        df_hbs_prorr = self.df_issues[
+                        (self.df_issues['TIPO'] == 'Tarea general') &
+                        (self.df_issues['SUBTIPO'] != 'Hito') &
+                        self.df_issues['INICIO'].notna() &
+                        self.df_issues['FIN'].notna() &
+                        self.df_issues['HBS_ESTIMADAS'].notna()
+                    ].copy()[['SOLUCION', 'CLAVE', 'INICIO', 'FIN', 'ESTADO_AGRUPADO', 'HBS_ESTIMADAS', 'HBS_RESTANTES']]
 
-        df_hbs_prorr = df_hbs_prorr[['SOLUCION', 'CLAVE', 'INICIO', 'FIN', 'ESTADO_AGRUPADO', 'HBS_ESTIMADAS', 'HBS_RESTANTES']]
-
-        df_hbs_prorr["INICIO_NORM"] = df_hbs_prorr["INICIO"].dt.normalize()
-        df_hbs_prorr["FIN_NORM"] = df_hbs_prorr["FIN"].dt.normalize()
-
-        # Ajustar inicio al máximo entre fecha original y HOY
         hoy = pd.Timestamp.now().normalize()
-        df_hbs_prorr["INICIO_PRORRATEO"] = df_hbs_prorr["INICIO_NORM"].clip(lower=hoy)
-        df_hbs_prorr["FIN_PRORRATEO"] = df_hbs_prorr["FIN_NORM"]
 
-        # Calcular duración total en días (incluyendo ambos extremos)
-        df_hbs_prorr["DIAS_TOTALES"] = (df_hbs_prorr["FIN_PRORRATEO"] - df_hbs_prorr["INICIO_PRORRATEO"]).dt.days + 1
+        # Normalizar fechas y aplicar clip: el prorrateo empieza desde hoy como mínimo
+        df_hbs_prorr["INICIO_PRORR"] = df_hbs_prorr["INICIO"].dt.normalize().clip(lower=hoy)
+        df_hbs_prorr["FIN_PRORR"]    = df_hbs_prorr["FIN"].dt.normalize()
 
-        df_hbs_prorr["MES_INICIO"] = df_hbs_prorr["INICIO_PRORRATEO"].dt.to_period("M")
-        df_hbs_prorr["MES_FIN"] = df_hbs_prorr["FIN_PRORRATEO"].dt.to_period("M")
+        # Descartar incidencias que ya terminaron (FIN < hoy → no hay nada que prorratear)
+        df_hbs_prorr = df_hbs_prorr[df_hbs_prorr["FIN_PRORR"] >= hoy]
 
-        # Generar rango mensual por cada incidencia
+        # Duración total del período de prorrateo
+        df_hbs_prorr["DIAS_TOTALES"] = (df_hbs_prorr["FIN_PRORR"] - df_hbs_prorr["INICIO_PRORR"]).dt.days + 1
+
+        # Expandir por mes
         df_hbs_prorr["MES"] = df_hbs_prorr.apply(
-            lambda x: pd.period_range(x["MES_INICIO"], x["MES_FIN"], freq="M"),
+            lambda x: pd.period_range(x["INICIO_PRORR"], x["FIN_PRORR"], freq="M"),
             axis=1
         )
-
-        # Expandir dataframe (explode) para tener una fila por incidencia y mes
         df_exp = df_hbs_prorr.explode("MES")
 
-        # Calcular inicio y fin real dentro de cada mes
+        # Inicio y fin del mes como timestamps
         df_exp["MES_INICIO_TS"] = df_exp["MES"].dt.to_timestamp().dt.normalize()
-        df_exp["MES_FIN_TS"] = (
-            df_exp["MES"].dt.to_timestamp(how="end").dt.normalize()
-        )
+        df_exp["MES_FIN_TS"]    = df_exp["MES"].dt.to_timestamp(how="end").dt.normalize()
 
-        # Convertir periodo a timestamp (inicio y fin de mes)
-        df_exp["INICIO_MES_REAL"] = df_exp[["INICIO_PRORRATEO", "MES_INICIO_TS"]].max(axis=1)
-        df_exp["FIN_MES_REAL"] = df_exp[["FIN_PRORRATEO", "MES_FIN_TS"]].min(axis=1)
+        # Recorte real dentro del mes
+        df_exp["INICIO_MES_REAL"] = df_exp[["INICIO_PRORR", "MES_INICIO_TS"]].max(axis=1)
+        df_exp["FIN_MES_REAL"]    = df_exp[["FIN_PRORR",    "MES_FIN_TS"  ]].min(axis=1)
 
-        # Días efectivos en el mes
-        df_exp["DIAS_EN_MES"] = (
-            (df_exp["FIN_MES_REAL"] - df_exp["INICIO_MES_REAL"]).dt.days + 1
-        )
+        # Días efectivos — con el filtro previo esto nunca debería ser ≤ 0,
+        # pero lo dejamos como salvaguarda
+        df_exp["DIAS_EN_MES"] = (df_exp["FIN_MES_REAL"] - df_exp["INICIO_MES_REAL"]).dt.days + 1
+        df_exp = df_exp[df_exp["DIAS_EN_MES"] > 0]  # salvaguarda explícita
 
-        # Prorratear horas
-        df_exp["HBS_ESTIMADAS_PRORR"] = (
-            df_exp["HBS_ESTIMADAS"] *
-            df_exp["DIAS_EN_MES"] /
-            df_exp["DIAS_TOTALES"]
-        )
+        # Prorrateo proporcional
+        df_exp["HBS_ESTIMADAS_PRORR"] = df_exp["HBS_ESTIMADAS"] * df_exp["DIAS_EN_MES"] / df_exp["DIAS_TOTALES"]
+        df_exp["HBS_RESTANTES_PRORR"] = df_exp["HBS_RESTANTES"] * df_exp["DIAS_EN_MES"] / df_exp["DIAS_TOTALES"]
 
-        df_exp["HBS_RESTANTES_PRORR"] = (
-            df_exp["HBS_RESTANTES"] *
-            df_exp["DIAS_EN_MES"] /
-            df_exp["DIAS_TOTALES"]
-        )
-
-        return df_exp
-
-
+        return df_exp[['SOLUCION', 'CLAVE', 'MES', 'INICIO', 'FIN', 'DIAS_EN_MES', 'DIAS_TOTALES', 'HBS_ESTIMADAS_PRORR', 'HBS_RESTANTES_PRORR']]
 
 
     def extract_relations(self):
