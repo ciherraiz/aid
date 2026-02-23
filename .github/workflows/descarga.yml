@@ -31,6 +31,7 @@ jobs:
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        SPREADSHEET_ID_CFG: ${{ secrets.SPREADSHEET_ID_CFG }}
         JIRA_URL: ${{ secrets.JIRA_URL }}
         JIRA_USER: ${{ secrets.JIRA_USER }}
         JIRA_PASS: ${{ secrets.JIRA_PASS }}
