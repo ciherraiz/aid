@@ -128,7 +128,7 @@ def main():
     SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
     
     actualizar_hoja(df_issues, SPREADSHEET_ID, hoja_nombre='REGISTROS')
-    actualizar_hoja(jira.df_milestones, SPREADSHEET_ID, hoja_nombre='HITOS')
+    actualizar_hoja(jira.df_milestones, SPREADSHEET_ID, hoja_nombre='FASES')
     actualizar_hoja(df_blocks, SPREADSHEET_ID, hoja_nombre='BLOQUEOS')
     actualizar_hoja(df_issues_hbs, SPREADSHEET_ID, hoja_nombre='HBS')
     
