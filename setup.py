@@ -8,7 +8,8 @@ setup(
         'pandas',
         'jira',
         'gspread',
-        'oauth2client'
+        'google-auth',
+        'google-auth-oauthlib',
     ],
     author='flaco',
     description='aid',
