@@ -391,16 +391,27 @@ class JiraAID:
     
     def get_milestone_data(self):
         cols = ['SOLUCION', 'CENTRO', 'CLAVE', 'FASE', 'HBS_ESTIMADAS', 'DIAS']
-        df_disponibles = self.df_issues[(self.df_issues['ESTADO_AGRUPADO']=='BACKLOG') | (self.df_issues['ESTADO_AGRUPADO']=='EN_CURSO')][cols]
-        df_bloqueadas = self.df_issues[self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA'][cols]
-        df_hitos_disp = self.pivot_by_phase(df_disponibles, 'HBS_ESTIMADAS')
-        df_hitos_block = self.pivot_by_phase(df_bloqueadas, 'HBS_ESTIMADAS')
+        df_disponibles = self.df_issues[((self.df_issues['ESTADO_AGRUPADO']=='BACKLOG') | (self.df_issues['ESTADO_AGRUPADO']=='EN_CURSO')) & (self.df_issues['TIPO']=='Tarea general')][cols]
+        df_bloqueadas = self.df_issues[(self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA') & (self.df_issues['TIPO']=='Tarea general')][cols]
+        df_cerradas = self.df_issues[(self.df_issues['ESTADO_AGRUPADO']=='CERRADA') & (self.df_issues['TIPO']=='Tarea general')][cols]
 
-        df_hitos_total = pd.merge(df_hitos_disp, df_hitos_block, on=['SOLUCION', 'CENTRO'], how='left', suffixes=('_DISP', '_BLK'))
+        df_fases_disp = self.pivot_by_phase(df_disponibles, 'HBS_ESTIMADAS')
+        df_fases_block = self.pivot_by_phase(df_bloqueadas, 'HBS_ESTIMADAS')
+        df_fases_cerr = self.pivot_by_phase(df_cerradas, 'HBS_ESTIMADAS')
+        df_fases_cerr = df_fases_cerr.rename(
+                                            columns={
+                                                col: f"{col}_CERR" 
+                                                for col in df_fases_cerr.columns 
+                                                if col not in ['SOLUCION', 'CENTRO']
+                                            }
+                                        )
 
-        df_hitos_total.fillna(0, inplace=True)
+        df_fases_total = pd.merge(df_fases_disp, df_fases_block, on=['SOLUCION', 'CENTRO'], how='left', suffixes=('_DISP', '_BLK'))
+        df_fases_total = pd.merge(df_fases_total, df_fases_cerr, on=['SOLUCION', 'CENTRO'], how='left', suffixes=('', '_CERR'))
 
-        return df_hitos_total
+        df_fases_total.fillna(0, inplace=True)
+
+        return df_fases_total
 
 
     """
