@@ -1,12 +1,9 @@
 from datetime import datetime
-import logging
 import os
 import time
 import pandas as pd
 from jira import JIRA
 from jira.exceptions import JIRAError
-
-logger = logging.getLogger(__name__)
 
 PROJECT_CATEGORY = 'PROYECTOS AREA IMPLANTACIONES'
     
@@ -31,7 +28,6 @@ class JiraAID:
             raise ConnectionError(f"Error al conectar con Jira (HTTP {status}): {e.text}") from e
         except Exception as e:
             raise ConnectionError(f"No se pudo conectar con Jira en '{jira_url}': {e}") from e
-        logger.info("Conectado a Jira: %s", jira_url)
 
     def get_projects_by_category(self, category_name):
         all_projects = self.jira.projects()
@@ -95,9 +91,8 @@ class JiraAID:
     def get_issues_projects(self):
 
         projects = self.get_projects_by_category(PROJECT_CATEGORY)
-        logger.info("Proyectos encontrados en '%s': %d", PROJECT_CATEGORY, len(projects))
         jql =f"project in ({','.join([d['key'] for d in projects])}) ORDER BY Clasificación ASC"
-
+        
         self.issues = self.get_issues(jql)
         df = self.issues_to_df(self.issues)
         self.df_issues = self.clean_issues(df)
@@ -175,14 +170,12 @@ class JiraAID:
                             f"get_issues falló tras {MAX_INTENTOS} intentos "
                             f"(startAt={start_at}): {e}"
                         ) from e
-                    logger.warning("Reintento %d/%d (startAt=%d, HTTP %s): %s", intento, MAX_INTENTOS, start_at, status, e)
                 except Exception as e:
                     if intento == MAX_INTENTOS:
                         raise RuntimeError(
                             f"get_issues falló tras {MAX_INTENTOS} intentos "
                             f"(startAt={start_at}): {e}"
                         ) from e
-                    logger.warning("Reintento %d/%d (startAt=%d): %s", intento, MAX_INTENTOS, start_at, e)
                 time.sleep(2 ** intento)  # backoff: 2s, 4s, 8s, 16s
 
             issues.extend(batch)
@@ -191,7 +184,6 @@ class JiraAID:
             start_at += len(batch)
 
 
-        logger.info("get_issues: %d issues obtenidas", len(issues))
         return issues
 
     def issues_to_df(self, issues):
@@ -256,7 +248,6 @@ class JiraAID:
         bloqueos = df_relaciones_bloqueos['CLAVE_DESTINO'].unique().tolist() #issues bloqueantes
 
         if bloqueos:
-            logger.info("Issues bloqueantes encontradas: %d", len(bloqueos))
             jql = f'key in ({",".join(bloqueos)})'
             issues_bloqueos = self.get_issues(jql)
 
