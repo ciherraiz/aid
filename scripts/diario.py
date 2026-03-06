@@ -133,12 +133,14 @@ def main():
     df_blocks = jira.get_blocks_projects()
     logger.info("Calculando HBS")
     df_issues_hbs = jira.calculate_hbs()
-
+    df_milestones = jira.df_milestones.copy()
+    df_milestones.insert(0, 'ID', df_milestones['SOLUCION'] + df_milestones['CENTRO'])
+    
     SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
     logger.info("Actualizando Google Sheets (id=%s)", SPREADSHEET_ID)
 
     actualizar_hoja(df_issues, SPREADSHEET_ID, hoja_nombre='REGISTROS')
-    actualizar_hoja(jira.df_milestones, SPREADSHEET_ID, hoja_nombre='HITOS')
+    actualizar_hoja(df_milestones, SPREADSHEET_ID, hoja_nombre='FASES')
     actualizar_hoja(df_blocks, SPREADSHEET_ID, hoja_nombre='BLOQUEOS')
     actualizar_hoja(df_issues_hbs, SPREADSHEET_ID, hoja_nombre='HBS')
 
