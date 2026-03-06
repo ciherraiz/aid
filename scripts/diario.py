@@ -1,11 +1,14 @@
 import gspread
 from google.oauth2.service_account import Credentials
 import json
+import logging
 import os
 import math
 import pandas as pd
 import numpy as np
 from aid import JiraAID
+
+logger = logging.getLogger(__name__)
 
 def conectar_google_sheets():
     """Establece conexión con Google Sheets usando credenciales"""
@@ -108,9 +111,15 @@ def actualizar_hoja(df, spreadsheet_id, hoja_nombre):
     worksheet.clear()
     worksheet.update([df_adaptado.columns.values.tolist()] + df_adaptado.values.tolist())
     
-    print(f"✓ Datos actualizados en Google Sheets: {hoja_nombre} ({len(df_adaptado)} registros)")
+    logger.info("Hoja '%s' actualizada: %d registros", hoja_nombre, len(df_adaptado))
 
-def main():   
+def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
+    logger.info("Inicio de ejecución diaria")
 
     jira_url = os.environ.get('JIRA_URL')
     jira_user = os.environ.get('JIRA_USER')
@@ -118,17 +127,22 @@ def main():
 
     jira = JiraAID(jira_url, jira_user, jira_pass)
 
-
+    logger.info("Extrayendo issues de proyectos")
     df_issues = jira.get_issues_projects()
+    logger.info("Extrayendo bloqueos")
     df_blocks = jira.get_blocks_projects()
+    logger.info("Calculando HBS")
     df_issues_hbs = jira.calculate_hbs()
-    
+
     SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
-    
+    logger.info("Actualizando Google Sheets (id=%s)", SPREADSHEET_ID)
+
     actualizar_hoja(df_issues, SPREADSHEET_ID, hoja_nombre='REGISTROS')
     actualizar_hoja(jira.df_milestones, SPREADSHEET_ID, hoja_nombre='HITOS')
     actualizar_hoja(df_blocks, SPREADSHEET_ID, hoja_nombre='BLOQUEOS')
     actualizar_hoja(df_issues_hbs, SPREADSHEET_ID, hoja_nombre='HBS')
+
+    logger.info("Ejecución completada")
     
 
 if __name__ == '__main__':
