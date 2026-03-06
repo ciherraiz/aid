@@ -1,5 +1,5 @@
-pandas
-gspread
-google-auth
-google-auth-oauthlib
-jira
+pandas>=2.2,<4
+gspread>=6.0,<7
+google-auth>=2.0,<3
+google-auth-oauthlib>=1.0,<2
+jira>=3.8,<4
