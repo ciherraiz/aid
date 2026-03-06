@@ -5,10 +5,13 @@ import time
 import pandas as pd
 from jira import JIRA
 from jira.exceptions import JIRAError
+from aid.constants import (
+    PROJECT_CATEGORY, JIRA_FIELDS, COLUMN_RENAME, PHASES,
+    STATUS_MAP, STATUS_DEFAULT, ISSUE_TYPE_TASK, ISSUE_TYPE_MILESTONE,
+    RELATION_BLOCKED_BY,
+)
 
 logger = logging.getLogger(__name__)
-
-PROJECT_CATEGORY = 'PROYECTOS AREA IMPLANTACIONES'
     
 class JiraAID:
 
@@ -130,27 +133,7 @@ class JiraAID:
     def get_issues(self, jql: str):
 
         
-        campos_deseados = ['key',
-                           'summary',
-                           'status',
-                           'issuetype',
-                           'description',
-                           'created',
-                           'resolved',
-                           'updated',
-                           'timeoriginalestimate', # Estimadas
-                           'timeestimate', # Restantes
-                           'customfield_16301', # Centros de implantación
-                           'customfield_10601', # Fecha de inicio deseada
-                           'customfield_10602', # Fecha de fin deseada
-                           'customfield_12001', # Tipo de tarea
-                           'customfield_12302', # Fecha inicio
-                           'customfield_12303', # Fecha Fin
-                           'issuelinks',  # Enlaces a otras issues
-                           'customfield_16100',  # (R) Responsable
-                           'customfield_16000', # Tipo de servicio
-                           'priority'
-                           ]
+        campos_deseados = JIRA_FIELDS
 
         issues = []
         start_at = 0
@@ -207,21 +190,7 @@ class JiraAID:
         df = df.where(pd.notnull(df), pd.NA)
         df = df.dropna(axis=1, how='all')
 
-        df.rename(columns={'Centros de implantación': 'CENTRO',
-                    'Key': 'CLAVE',
-                    'Summary': 'TITULO',
-                    'Descripción':'DESCRIPCION',
-                    'Fecha Inicio': 'INICIO',
-                    'Fecha Fin': 'FIN',
-                    'Fecha de Actualización': 'ACTUALIZACION',
-                    'Issue Type': 'TIPO',
-                    'Tipo de Tarea': 'SUBTIPO',
-                    'Status': 'ESTADO',
-                    'Estimadas': 'HBS_ESTIMADAS',
-                    'Restantes': 'HBS_RESTANTES',
-                    '(R) Responsable': 'RESPONSABLE_SERVICIO',
-                    'Tipo de servicio': 'TIPO_SERVICIO',
-                    'Prioridad': 'PRIORIDAD'}, inplace=True)
+        df.rename(columns=COLUMN_RENAME, inplace=True)
 
         return df
 
@@ -244,14 +213,14 @@ class JiraAID:
 
         df['ESTADO_AGRUPADO'] = (
             df['ESTADO']
-            .map({'Abierta': 'BACKLOG', 'Cerrada': 'CERRADA', 'Pdte. Información': 'BLOQUEADA'})
-            .fillna("EN_CURSO")
+            .map(STATUS_MAP)
+            .fillna(STATUS_DEFAULT)
         )
         return df
 
     def get_blocks_projects(self):
         cols_bloqueo = ['CLAVE_BLOQUEO','TITULO_BLOQUEO','INICIO_BLOQUEO', 'DESCRIPCION_BLOQUEO', 'ACTUALIZACION_BLOQUEO', 'RESPONSABLE_BLOQUEO', 'SERVICIO_BLOQUEO']
-        df_relaciones_bloqueos = self.df_relations[self.df_relations['RELACION']=='Es bloqueada por']
+        df_relaciones_bloqueos = self.df_relations[self.df_relations['RELACION']==RELATION_BLOCKED_BY]
 
         bloqueos = df_relaciones_bloqueos['CLAVE_DESTINO'].unique().tolist() #issues bloqueantes
 
@@ -281,8 +250,8 @@ class JiraAID:
     def calculate_hbs (self): 
 
         df_hbs_prorr = self.df_issues[
-                        (self.df_issues['TIPO'] == 'Tarea general') &
-                        (self.df_issues['SUBTIPO'] != 'Hito') &
+                        (self.df_issues['TIPO'] == ISSUE_TYPE_TASK) &
+                        (self.df_issues['SUBTIPO'] != ISSUE_TYPE_MILESTONE) &
                         self.df_issues['INICIO'].notna() &
                         self.df_issues['FIN'].notna() &
                         self.df_issues['HBS_ESTIMADAS'].notna()
@@ -403,7 +372,7 @@ class JiraAID:
             DataFrame pivotado con SOLUCION, CENTRO y una columna por cada fase
         """
         # Lista de fases en el orden deseado
-        fases_ordenadas = ['APS', 'RP', 'PRE', 'IMP', 'ARR', 'CON', 'EXT', 'PN3']
+        fases_ordenadas = PHASES
         
         # Crear una copia del dataframe y asegurar que la columna de agregación sea numérica
         df_limpio = df.copy()
@@ -435,9 +404,9 @@ class JiraAID:
     
     def get_milestone_data(self):
         cols = ['SOLUCION', 'CENTRO', 'CLAVE', 'FASE', 'HBS_ESTIMADAS', 'DIAS']
-        df_disponibles = self.df_issues[((self.df_issues['ESTADO_AGRUPADO']=='BACKLOG') | (self.df_issues['ESTADO_AGRUPADO']=='EN_CURSO')) & (self.df_issues['TIPO']=='Tarea general')][cols]
-        df_bloqueadas = self.df_issues[(self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA') & (self.df_issues['TIPO']=='Tarea general')][cols]
-        df_cerradas = self.df_issues[(self.df_issues['ESTADO_AGRUPADO']=='CERRADA') & (self.df_issues['TIPO']=='Tarea general')][cols]
+        df_disponibles = self.df_issues[((self.df_issues['ESTADO_AGRUPADO']=='BACKLOG') | (self.df_issues['ESTADO_AGRUPADO']==STATUS_DEFAULT)) & (self.df_issues['TIPO']==ISSUE_TYPE_TASK)][cols]
+        df_bloqueadas = self.df_issues[(self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA') & (self.df_issues['TIPO']==ISSUE_TYPE_TASK)][cols]
+        df_cerradas = self.df_issues[(self.df_issues['ESTADO_AGRUPADO']=='CERRADA') & (self.df_issues['TIPO']==ISSUE_TYPE_TASK)][cols]
 
         df_fases_disp = self.pivot_by_phase(df_disponibles, 'HBS_ESTIMADAS')
         df_fases_block = self.pivot_by_phase(df_bloqueadas, 'HBS_ESTIMADAS')

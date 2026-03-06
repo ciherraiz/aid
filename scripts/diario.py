@@ -7,6 +7,7 @@ import math
 import pandas as pd
 import numpy as np
 from aid import JiraAID
+from aid.constants import GOOGLE_SCOPES, SHEET_REGISTROS, SHEET_FASES, SHEET_BLOQUEOS, SHEET_HBS
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +17,7 @@ def conectar_google_sheets():
     creds_json = os.environ.get('GOOGLE_CREDENTIALS')
     creds_dict = json.loads(creds_json)
     
-    scope = [
-        'https://spreadsheets.google.com/feeds',
-        'https://www.googleapis.com/auth/drive'
-    ]
+    scope = GOOGLE_SCOPES
     
     credentials = Credentials.from_service_account_info(creds_dict, scopes=scope)
     
@@ -139,10 +137,10 @@ def main():
     SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
     logger.info("Actualizando Google Sheets (id=%s)", SPREADSHEET_ID)
 
-    actualizar_hoja(df_issues, SPREADSHEET_ID, hoja_nombre='REGISTROS')
-    actualizar_hoja(df_milestones, SPREADSHEET_ID, hoja_nombre='FASES')
-    actualizar_hoja(df_blocks, SPREADSHEET_ID, hoja_nombre='BLOQUEOS')
-    actualizar_hoja(df_issues_hbs, SPREADSHEET_ID, hoja_nombre='HBS')
+    actualizar_hoja(df_issues, SPREADSHEET_ID, hoja_nombre=SHEET_REGISTROS)
+    actualizar_hoja(df_milestones, SPREADSHEET_ID, hoja_nombre=SHEET_FASES)
+    actualizar_hoja(df_blocks, SPREADSHEET_ID, hoja_nombre=SHEET_BLOQUEOS)
+    actualizar_hoja(df_issues_hbs, SPREADSHEET_ID, hoja_nombre=SHEET_HBS)
 
     logger.info("Ejecución completada")
     
