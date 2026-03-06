@@ -267,6 +267,7 @@ class JiraAID:
 
         # Duración total del período de prorrateo
         df_hbs_prorr["DIAS_TOTALES"] = (df_hbs_prorr["FIN_PRORR"] - df_hbs_prorr["INICIO_PRORR"]).dt.days + 1
+        df_hbs_prorr = df_hbs_prorr[df_hbs_prorr["DIAS_TOTALES"] > 0]  # descarta datos con INICIO > FIN
 
         # Expandir por mes
         df_hbs_prorr["MES"] = df_hbs_prorr.apply(
