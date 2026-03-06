@@ -94,7 +94,7 @@ def actualizar_hoja(df, spreadsheet_id, hoja_nombre):
     # Seleccionar o crear la pestaña
     try:
         worksheet = sheet.worksheet(hoja_nombre)
-    except:
+    except gspread.exceptions.WorksheetNotFound:
         worksheet = sheet.add_worksheet(
             title=hoja_nombre, 
             rows=100, 
