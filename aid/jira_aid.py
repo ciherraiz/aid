@@ -154,7 +154,7 @@ class JiraAID:
 
         issues = []
         start_at = 0
-        max_results = 50
+        max_results = 100
 
 
         MAX_INTENTOS = 4
