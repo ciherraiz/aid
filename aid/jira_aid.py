@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 import pandas as pd
 from jira import JIRA
+from jira.exceptions import JIRAError
 
 PROJECT_CATEGORY = 'PROYECTOS AREA IMPLANTACIONES'
     
@@ -12,10 +13,20 @@ class JiraAID:
         if not jira_url or not jira_user:
             raise ValueError("Error en configuración de autenticación")
 
-        self.jira = JIRA(
-            server=jira_url,
-            basic_auth=(jira_user, jira_pass)
-        )
+        try:
+            self.jira = JIRA(
+                server=jira_url,
+                basic_auth=(jira_user, jira_pass)
+            )
+        except JIRAError as e:
+            status = e.status_code if hasattr(e, "status_code") else "?"
+            if status == 401:
+                raise ConnectionError(f"Credenciales de Jira inválidas (HTTP 401): {jira_url}") from e
+            if status == 403:
+                raise ConnectionError(f"Sin permisos para acceder a Jira (HTTP 403): {jira_url}") from e
+            raise ConnectionError(f"Error al conectar con Jira (HTTP {status}): {e.text}") from e
+        except Exception as e:
+            raise ConnectionError(f"No se pudo conectar con Jira en '{jira_url}': {e}") from e
 
     def get_projects_by_category(self, category_name):
         all_projects = self.jira.projects()
