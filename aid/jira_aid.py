@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import time
 import pandas as pd
 from jira import JIRA
 from jira.exceptions import JIRAError
@@ -151,13 +152,35 @@ class JiraAID:
         max_results = 50
 
 
+        MAX_INTENTOS = 4
         while True:
-            batch = self.jira.search_issues(jql, expand='names', fields=campos_deseados, startAt=start_at, maxResults=max_results)
-            issues.extend(batch)
+            for intento in range(1, MAX_INTENTOS + 1):
+                try:
+                    batch = self.jira.search_issues(
+                        jql, expand='names', fields=campos_deseados,
+                        startAt=start_at, maxResults=max_results
+                    )
+                    break  # éxito: salir del bucle de reintentos
+                except JIRAError as e:
+                    status = getattr(e, "status_code", None)
+                    if status in (400, 401, 403):
+                        raise  # error permanente: no reintentar
+                    if intento == MAX_INTENTOS:
+                        raise RuntimeError(
+                            f"get_issues falló tras {MAX_INTENTOS} intentos "
+                            f"(startAt={start_at}): {e}"
+                        ) from e
+                except Exception as e:
+                    if intento == MAX_INTENTOS:
+                        raise RuntimeError(
+                            f"get_issues falló tras {MAX_INTENTOS} intentos "
+                            f"(startAt={start_at}): {e}"
+                        ) from e
+                time.sleep(2 ** intento)  # backoff: 2s, 4s, 8s, 16s
 
+            issues.extend(batch)
             if len(batch) < max_results:
                 break
-
             start_at += len(batch)
 
 
