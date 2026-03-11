@@ -111,6 +111,38 @@ def actualizar_hoja(df, spreadsheet_id, hoja_nombre):
     
     logger.info("Hoja '%s' actualizada: %d registros", hoja_nombre, len(df_adaptado))
 
+def leer_hoja(spreadsheet_id: str, hoja_nombre: str) -> pd.DataFrame:
+    """
+    Lee el contenido de una hoja de Google Sheets y lo devuelve como DataFrame.
+
+    Args:
+        spreadsheet_id: ID del Google Sheet (cadena de la URL).
+        hoja_nombre: Nombre de la pestaña a leer.
+
+    Returns:
+        DataFrame con el contenido de la hoja.
+        DataFrame vacío si la hoja no existe o está vacía.
+    """
+    client = conectar_google_sheets()
+    sheet = client.open_by_key(spreadsheet_id)
+
+    try:
+        worksheet = sheet.worksheet(hoja_nombre)
+    except gspread.exceptions.WorksheetNotFound:
+        logger.warning("Hoja '%s' no encontrada en spreadsheet '%s'", hoja_nombre, spreadsheet_id)
+        return pd.DataFrame()
+
+    data = worksheet.get_all_values()
+
+    if not data:
+        logger.warning("Hoja '%s' vacía", hoja_nombre)
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data[1:], columns=data[0])
+    logger.info("Hoja '%s' leída: %d filas", hoja_nombre, len(df))
+    return df
+
+
 def main():
     logging.basicConfig(
         level=logging.INFO,
