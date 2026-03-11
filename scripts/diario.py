@@ -5,7 +5,7 @@ import pandas as pd
 
 from aid import JiraAID
 from aid.constants import SHEET_REGISTROS, SHEET_FASES, SHEET_BLOQUEOS, SHEET_HBS
-from gsheets import actualizar_hoja
+from aid.gsheets import actualizar_hoja
 
 logger = logging.getLogger(__name__)
 

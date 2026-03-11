@@ -8,7 +8,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from aid.constants import GOOGLE_SCOPES
+from .constants import GOOGLE_SCOPES
 
 logger = logging.getLogger(__name__)
 
