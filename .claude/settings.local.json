@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import ast; tree=ast.parse\\(open\\(''scripts/diario.py''\\).read\\(\\)\\); fns=[n.name for n in ast.walk\\(tree\\) if isinstance\\(n, ast.FunctionDef\\)]; assert fns==[''main''], fns; print\\(''diario.py OK:'', fns\\)\")"
+    ]
+  }
+}
