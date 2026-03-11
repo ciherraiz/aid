@@ -6,3 +6,4 @@
 ## Criterios de aceptación
 ### [todas las funciones que operan google gsheets ya no están definidas en diario.py]
 ### [en diario.py sólo debe quedar el método main()]
+### [el nuevo módulo sheets.py debe residir en la carpeta aid junto al fichero jira_aid.py]
