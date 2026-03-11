@@ -1,146 +1,13 @@
-import gspread
-from google.oauth2.service_account import Credentials
-import json
 import logging
 import os
-import math
+
 import pandas as pd
-import numpy as np
+
 from aid import JiraAID
-from aid.constants import GOOGLE_SCOPES, SHEET_REGISTROS, SHEET_FASES, SHEET_BLOQUEOS, SHEET_HBS
+from aid.constants import SHEET_REGISTROS, SHEET_FASES, SHEET_BLOQUEOS, SHEET_HBS
+from gsheets import actualizar_hoja
 
 logger = logging.getLogger(__name__)
-
-def conectar_google_sheets():
-    """Establece conexión con Google Sheets usando credenciales"""
-    # Las credenciales estarán en una variable de entorno
-    creds_json = os.environ.get('GOOGLE_CREDENTIALS')
-    creds_dict = json.loads(creds_json)
-    
-    scope = GOOGLE_SCOPES
-    
-    credentials = Credentials.from_service_account_info(creds_dict, scopes=scope)
-    
-    client = gspread.authorize(credentials)
-    return client
-
-def convertir_para_sheets(df):
-    """
-    Convierte un DataFrame a formatos 100% compatibles con Google Sheets
-    Elimina NaN, inf, -inf, NaT y otros valores problemáticos
-    """
-    df_copy = df.copy()
-    
-    for col in df_copy.columns:
-        dtype = df_copy[col].dtype
-        
-        # 1. Convertir datetime/Timestamp a string
-        if pd.api.types.is_datetime64_any_dtype(dtype):
-            df_copy[col] = df_copy[col].apply(
-                lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) else ''
-            )
-        
-        # 2. Convertir timedelta
-        elif pd.api.types.is_timedelta64_dtype(dtype):
-            df_copy[col] = df_copy[col].apply(
-                lambda x: str(x) if pd.notna(x) else ''
-            )
-        
-        # 3. Convertir booleanos
-        elif pd.api.types.is_bool_dtype(dtype):
-            df_copy[col] = df_copy[col].apply(
-                lambda x: 'TRUE' if x is True else ('FALSE' if x is False else '')
-            )
-        
-        # 4. Convertir numéricos (aquí está el problema principal)
-        elif pd.api.types.is_numeric_dtype(dtype):
-            def limpiar_numero(x):
-                # Verificar si es NaN, None, inf o -inf
-                if pd.isna(x) or x is None:
-                    return ''
-                if isinstance(x, float) and (math.isinf(x) or math.isnan(x)):
-                    return ''
-                return x
-            
-            df_copy[col] = df_copy[col].apply(limpiar_numero)
-        
-        # 5. Convertir objetos/strings
-        else:
-            df_copy[col] = df_copy[col].apply(
-                lambda x: str(x) if pd.notna(x) and x is not None and x != '' else ''
-            )
-    
-    # Reemplazo final de cualquier NaN que haya quedado
-    df_copy = df_copy.replace([np.nan, np.inf, -np.inf], '')
-    
-    # Convertir None a string vacío
-    df_copy = df_copy.fillna('')
-    
-    return df_copy
-
-def actualizar_hoja(df, spreadsheet_id, hoja_nombre):
-    """
-    Actualiza una hoja de Google Sheets con el DataFrame
-    
-    Args:
-        df: DataFrame de pandas
-        spreadsheet_id: ID de tu Google Sheet (está en la URL)
-        hoja_nombre: Nombre de la pestaña
-    """
-    client = conectar_google_sheets()
-    
-    # Abrir la hoja de cálculo
-    sheet = client.open_by_key(spreadsheet_id)
-    
-    # Seleccionar o crear la pestaña
-    try:
-        worksheet = sheet.worksheet(hoja_nombre)
-    except gspread.exceptions.WorksheetNotFound:
-        worksheet = sheet.add_worksheet(
-            title=hoja_nombre, 
-            rows=100, 
-            cols=20
-        )
-    
-    
-    df_adaptado = convertir_para_sheets(df)
-
-    # Sobrescribir todo
-    worksheet.clear()
-    worksheet.update([df_adaptado.columns.values.tolist()] + df_adaptado.values.tolist())
-    
-    logger.info("Hoja '%s' actualizada: %d registros", hoja_nombre, len(df_adaptado))
-
-def leer_hoja(spreadsheet_id: str, hoja_nombre: str) -> pd.DataFrame:
-    """
-    Lee el contenido de una hoja de Google Sheets y lo devuelve como DataFrame.
-
-    Args:
-        spreadsheet_id: ID del Google Sheet (cadena de la URL).
-        hoja_nombre: Nombre de la pestaña a leer.
-
-    Returns:
-        DataFrame con el contenido de la hoja.
-        DataFrame vacío si la hoja no existe o está vacía.
-    """
-    client = conectar_google_sheets()
-    sheet = client.open_by_key(spreadsheet_id)
-
-    try:
-        worksheet = sheet.worksheet(hoja_nombre)
-    except gspread.exceptions.WorksheetNotFound:
-        logger.warning("Hoja '%s' no encontrada en spreadsheet '%s'", hoja_nombre, spreadsheet_id)
-        return pd.DataFrame()
-
-    data = worksheet.get_all_values()
-
-    if not data:
-        logger.warning("Hoja '%s' vacía", hoja_nombre)
-        return pd.DataFrame()
-
-    df = pd.DataFrame(data[1:], columns=data[0])
-    logger.info("Hoja '%s' leída: %d filas", hoja_nombre, len(df))
-    return df
 
 
 def main():
@@ -165,7 +32,7 @@ def main():
     df_issues_hbs = jira.calculate_hbs()
     df_milestones = jira.df_milestones.copy()
     df_milestones.insert(0, 'ID', df_milestones['SOLUCION'] + df_milestones['CENTRO'])
-    
+
     SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
     logger.info("Actualizando Google Sheets (id=%s)", SPREADSHEET_ID)
 
@@ -175,7 +42,7 @@ def main():
     actualizar_hoja(df_issues_hbs, SPREADSHEET_ID, hoja_nombre=SHEET_HBS)
 
     logger.info("Ejecución completada")
-    
+
 
 if __name__ == '__main__':
     main()
