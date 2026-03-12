@@ -48,10 +48,11 @@ ISSUE_TYPE_TASK      = 'Tarea general'
 ISSUE_TYPE_MILESTONE = 'Hito'
 RELATION_BLOCKED_BY  = 'Es bloqueada por'
 
-SHEET_REGISTROS = 'REGISTROS'
-SHEET_FASES     = 'FASES'
-SHEET_BLOQUEOS  = 'BLOQUEOS'
-SHEET_HBS       = 'HBS'
+SHEET_REGISTROS           = 'REGISTROS'
+SHEET_FASES               = 'FASES'
+SHEET_BLOQUEOS            = 'BLOQUEOS'
+SHEET_HBS                 = 'HBS'
+SHEET_COMENTARIOS_BLOQUEO = 'COMENTARIOS_BLOQUEO'
 
 GOOGLE_SCOPES = [
     'https://spreadsheets.google.com/feeds',
