@@ -427,21 +427,25 @@ class JiraAID:
         return df_fases_total
 
 
-    """
-    def get_comments(self, issues):
-            for issue in issues:
-                comments = self.jira.comments(issue.key)
+    def get_comments(self, issue_keys: list) -> pd.DataFrame:
+        empty = pd.DataFrame(columns=['CLAVE', 'FECHA_COMENTARIO', 'AUTOR_COMENTARIO', 'COMENTARIO'])
+        if not issue_keys:
+            return empty
 
-                for c in comments:
-                    data.append({
-                        "issue": issue.key,
-                        "status": issue.fields.status.name,
-                        "comment": c.body,
-                        "author": c.author.displayName,
-                        "created": c.created
+        rows = []
+        for key in issue_keys:
+            try:
+                for c in self.jira.comments(key):
+                    rows.append({
+                        'CLAVE': key,
+                        'FECHA_COMENTARIO': pd.to_datetime(c.created, utc=True).tz_localize(None),
+                        'AUTOR_COMENTARIO': c.author.displayName,
+                        'COMENTARIO': c.body,
                     })
+            except Exception as e:
+                logger.warning("get_comments: error en issue %s: %s", key, e)
 
-            import pandas as pd
-            df = pd.DataFrame(data)
+        if not rows:
+            return empty
 
-    """
+        return pd.DataFrame(rows)

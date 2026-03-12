@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 from aid import JiraAID
-from aid.constants import SHEET_REGISTROS, SHEET_FASES, SHEET_BLOQUEOS, SHEET_HBS
+from aid.constants import SHEET_REGISTROS, SHEET_FASES, SHEET_BLOQUEOS, SHEET_HBS, SHEET_COMENTARIOS_BLOQUEO
 from aid.gsheets import actualizar_hoja
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,9 @@ def main():
     df_issues = jira.get_issues_projects()
     logger.info("Extrayendo bloqueos")
     df_blocks = jira.get_blocks_projects()
+    logger.info("Extrayendo comentarios de bloqueos")
+    claves_bloqueo = df_blocks['CLAVE_BLOQUEO'].dropna().unique().tolist()
+    df_comentarios = jira.get_comments(claves_bloqueo)
     logger.info("Calculando HBS")
     df_issues_hbs = jira.calculate_hbs()
     df_milestones = jira.df_milestones.copy()
@@ -40,6 +43,7 @@ def main():
     actualizar_hoja(df_milestones, SPREADSHEET_ID, hoja_nombre=SHEET_FASES)
     actualizar_hoja(df_blocks, SPREADSHEET_ID, hoja_nombre=SHEET_BLOQUEOS)
     actualizar_hoja(df_issues_hbs, SPREADSHEET_ID, hoja_nombre=SHEET_HBS)
+    actualizar_hoja(df_comentarios, SPREADSHEET_ID, hoja_nombre=SHEET_COMENTARIOS_BLOQUEO)
 
     logger.info("Ejecución completada")
 
