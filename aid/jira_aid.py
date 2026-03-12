@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import os
 import time
@@ -427,18 +427,23 @@ class JiraAID:
         return df_fases_total
 
 
-    def get_comments(self, issue_keys: list) -> pd.DataFrame:
+    def get_comments(self, issue_keys: list, dias: int = 14) -> pd.DataFrame:
         empty = pd.DataFrame(columns=['CLAVE', 'FECHA_COMENTARIO', 'AUTOR_COMENTARIO', 'COMENTARIO'])
         if not issue_keys:
             return empty
+
+        fecha_umbral = datetime.utcnow() - timedelta(days=dias)
 
         rows = []
         for key in issue_keys:
             try:
                 for c in self.jira.comments(key):
+                    fecha = pd.to_datetime(c.created, utc=True).tz_localize(None)
+                    if fecha < pd.Timestamp(fecha_umbral):
+                        continue
                     rows.append({
                         'CLAVE': key,
-                        'FECHA_COMENTARIO': pd.to_datetime(c.created, utc=True).tz_localize(None),
+                        'FECHA_COMENTARIO': fecha,
                         'AUTOR_COMENTARIO': c.author.displayName,
                         'COMENTARIO': c.body,
                     })
