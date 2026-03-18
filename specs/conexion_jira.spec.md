@@ -55,4 +55,4 @@ if __name__ == "__main__":
 ### [Actualizar únicamente los elementos necesarios para conectar correctamente al servidor jira]
 ### [Actualiza los módulos necesarios evitando incluir elementos que no son pertienentes aunque aparezcan en el código de ejemplo]
 ## Criterios de aceptación
-### [La conexión y la ejecución de alguna llamada al servidor jira es correcta]
+### [La conexión y la ejecución de alguna llamada al servidor jira es correcta.]
