@@ -1,17 +1,38 @@
 from datetime import datetime
 import logging
 import os
+import ssl
 import time
+import urllib3
 import pandas as pd
 from jira import JIRA
 from jira.exceptions import JIRAError
+from requests.adapters import HTTPAdapter
+from urllib3.util.ssl_ import create_urllib3_context
 from aid.constants import (
     PROJECT_CATEGORY, JIRA_FIELDS, COLUMN_RENAME, PHASES,
     STATUS_MAP, STATUS_DEFAULT, ISSUE_TYPE_TASK, ISSUE_TYPE_MILESTONE,
     RELATION_BLOCKED_BY,
 )
 
+urllib3.disable_warnings()
+
 logger = logging.getLogger(__name__)
+
+
+class TLSRSAAdapter(HTTPAdapter):
+    """
+    Adapter para servidores con cifrados RSA sin Forward Secrecy.
+    Necesario para conectar con infraestructura de la Junta de Andalucía
+    desde Python con OpenSSL 3.x (que los bloquea por defecto).
+    """
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = create_urllib3_context()
+        ctx.set_ciphers("AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-CBC-SHA256:AES256-CBC-SHA:@SECLEVEL=0")
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        kwargs["ssl_context"] = ctx
+        return super().init_poolmanager(*args, **kwargs)
     
 class JiraAID:
 
@@ -23,8 +44,13 @@ class JiraAID:
         try:
             self.jira = JIRA(
                 server=jira_url,
-                basic_auth=(jira_user, jira_pass)
+                basic_auth=(jira_user, jira_pass),
+                options={"verify": False},
+                get_server_info=False,
+                max_retries=0,
             )
+            self.jira._session.mount("https://", TLSRSAAdapter())
+            self.jira._session.verify = False
         except JIRAError as e:
             status = e.status_code if hasattr(e, "status_code") else "?"
             if status == 401:
