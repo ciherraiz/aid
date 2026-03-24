@@ -77,21 +77,10 @@ class JiraAID:
         d["Status"] = issue.fields.status.name
         d["Issue Type"] = issue.fields.issuetype.name
 
-
-        #    print(issue.raw["fields"].items())
-
         for fid, val in issue.raw["fields"].items():
             if fid in field_names:
                 name = field_names[fid]
                 d[name] = self.normalize_jira_value(val)
-                """
-                if hasattr(val, "name"):
-                    d[name] = val.name
-                elif isinstance(val, list):
-                    d[name] = ", ".join(getattr(v, "name", str(v)) for v in val)
-                else:
-                    d[name] = val
-                """
         return d
 
 
