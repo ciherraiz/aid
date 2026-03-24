@@ -15,6 +15,8 @@ JIRA_FIELDS = [
     'customfield_16100',      # (R) Responsable
     'customfield_16000',      # Tipo de servicio
     'customfield_16002',      # Agrupadores
+    'customfield_12742',      # Fecha límite
+    'customfield_16104',      # Justificación de la fecha límite
     'priority',
 ]
 
@@ -33,8 +35,10 @@ COLUMN_RENAME = {
     'Restantes':               'HBS_RESTANTES',
     '(R) Responsable':         'RESPONSABLE_SERVICIO',
     'Tipo de servicio':        'TIPO_SERVICIO',
-    'Agrupadores':             'AGRUPADOR',
-    'Prioridad':               'PRIORIDAD',
+    'Agrupadores':                          'AGRUPADOR',
+    'Fecha límite':                        'LIMITE',
+    'Justificación de la fecha límite':    'JUSTIFICACION_LIMITE',
+    'Prioridad':                           'PRIORIDAD',
 }
 
 PHASES = ['APS', 'RP', 'PRE', 'IMP', 'ARR', 'CON', 'EXT', 'PN3']
