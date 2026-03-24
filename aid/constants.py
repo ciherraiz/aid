@@ -14,6 +14,7 @@ JIRA_FIELDS = [
     'issuelinks',             # Enlaces a otras issues
     'customfield_16100',      # (R) Responsable
     'customfield_16000',      # Tipo de servicio
+    'customfield_16002',      # Agrupadores
     'priority',
 ]
 
@@ -32,6 +33,7 @@ COLUMN_RENAME = {
     'Restantes':               'HBS_RESTANTES',
     '(R) Responsable':         'RESPONSABLE_SERVICIO',
     'Tipo de servicio':        'TIPO_SERVICIO',
+    'Agrupadores':             'AGRUPADOR',
     'Prioridad':               'PRIORIDAD',
 }
 

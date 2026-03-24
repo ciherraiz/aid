@@ -127,7 +127,8 @@ class JiraAID:
                             'RESPONSABLE_SERVICIO',
                             'TIPO_SERVICIO',
                             'DIAS',
-                            'PRIORIDAD']].copy()
+                            'PRIORIDAD',
+                            'AGRUPADOR']].copy()
 
 
     def get_issues(self, jql: str):
