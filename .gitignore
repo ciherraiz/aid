@@ -1,3 +1,5 @@
+credentials.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -137,6 +139,8 @@ celerybeat.pid
 # Environments
 .env
 .envrc
+var.env
+credentials.json
 .venv
 env/
 venv/

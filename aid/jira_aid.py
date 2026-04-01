@@ -103,21 +103,10 @@ class JiraAID:
         d["Status"] = issue.fields.status.name
         d["Issue Type"] = issue.fields.issuetype.name
 
-
-        #    print(issue.raw["fields"].items())
-
         for fid, val in issue.raw["fields"].items():
             if fid in field_names:
                 name = field_names[fid]
                 d[name] = self.normalize_jira_value(val)
-                """
-                if hasattr(val, "name"):
-                    d[name] = val.name
-                elif isinstance(val, list):
-                    d[name] = ", ".join(getattr(v, "name", str(v)) for v in val)
-                else:
-                    d[name] = val
-                """
         return d
 
 
@@ -141,7 +130,7 @@ class JiraAID:
                             'FASE',
                             'TITULO',
                             'DESCRIPCION',
-                            'INICIO', 'FIN',
+                            'INICIO', 'FIN', 'LIMITE',
                             'ACTUALIZACION',
                             'ESTADO',
                             'CLAVE_MCMI',
@@ -153,7 +142,9 @@ class JiraAID:
                             'RESPONSABLE_SERVICIO',
                             'TIPO_SERVICIO',
                             'DIAS',
-                            'PRIORIDAD']].copy()
+                            'PRIORIDAD',
+                            'AGRUPADOR',
+                            'JUSTIFICACION_LIMITE']].copy()
 
 
     def get_issues(self, jql: str):
@@ -226,10 +217,11 @@ class JiraAID:
         df['FASE'] = df['DESCRIPCION'].str.split('-').str[1]
         df['ICLAVE'] = df['CENTRO'] + '_' + df['CLAVE_MCMI']
 
-        df[['INICIO', 'FIN']] = (
-        df[['INICIO', 'FIN']]
-        .apply(pd.to_datetime, errors="coerce", utc=True)
-        .apply(lambda x: x.dt.tz_localize(None))
+        date_cols = [c for c in ['INICIO', 'FIN', 'LIMITE'] if c in df.columns]
+        df[date_cols] = (
+            df[date_cols]
+            .apply(pd.to_datetime, errors="coerce", utc=True)
+            .apply(lambda x: x.dt.tz_localize(None))
         )
 
         df['DIAS'] = (df['FIN'] - df['INICIO']).dt.days
@@ -242,6 +234,11 @@ class JiraAID:
             .map(STATUS_MAP)
             .fillna(STATUS_DEFAULT)
         )
+
+        for col in ['LIMITE', 'JUSTIFICACION_LIMITE']:
+            if col not in df.columns:
+                df[col] = pd.NA
+
         return df
 
     def get_blocks_projects(self):
