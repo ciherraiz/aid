@@ -266,7 +266,7 @@ class JiraAID:
         df_total_bloqueadas = self.df_issues[self.df_issues['ESTADO_AGRUPADO']=='BLOQUEADA'][['SOLUCION', 'CLAVE', 'CENTRO', 'HBS_RESTANTES', 'ESTADO', 'PRIORIDAD']]
         
         df_bloqueos = df_total_bloqueadas.merge(df_bloqueos, left_on='CLAVE', right_on='CLAVE_ORIGEN', how='left')
-        df_bloqueos['INICIO_BLOQUEO'] = pd.to_datetime(df_bloqueos["INICIO_BLOQUEO"], errors="coerce").dt.normalize()
+        df_bloqueos['INICIO_BLOQUEO'] = pd.to_datetime(df_bloqueos["INICIO_BLOQUEO"], errors="coerce", utc=True).dt.normalize()
         df_bloqueos['DIAS'] = (pd.to_datetime('today', utc=True).normalize() - df_bloqueos['INICIO_BLOQUEO']).dt.days
 
 
