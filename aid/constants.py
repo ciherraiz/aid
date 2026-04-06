@@ -52,7 +52,7 @@ STATUS_DEFAULT = 'EN_CURSO'
 
 ISSUE_TYPE_TASK      = 'Tarea general'
 ISSUE_TYPE_MILESTONE = 'Hito'
-RELATION_BLOCKED_BY  = 'Es bloqueada por'
+RELATION_BLOCKED_BY  = 'Depende de'
 
 SHEET_REGISTROS           = 'REGISTROS'
 SHEET_FASES               = 'FASES'
