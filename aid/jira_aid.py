@@ -123,6 +123,8 @@ class JiraAID:
 
         self.df_milestones = self.get_milestone_data()
 
+        df_last_comments = self.get_last_comments(self.df_issues['CLAVE'].tolist())
+        self.df_issues = self.df_issues.merge(df_last_comments, on='CLAVE', how='left')
 
         return self.df_issues[['SOLUCION',
                             'CENTRO',
@@ -144,7 +146,10 @@ class JiraAID:
                             'DIAS',
                             'PRIORIDAD',
                             'AGRUPADOR',
-                            'JUSTIFICACION_LIMITE']].copy()
+                            'JUSTIFICACION_LIMITE',
+                            'FECHA_ULTIMO_COMENTARIO',
+                            'AUTOR_ULTIMO_COMENTARIO',
+                            'ULTIMO_COMENTARIO']].copy()
 
 
     def get_issues(self, jql: str):
@@ -449,6 +454,29 @@ class JiraAID:
 
         return df_fases_total
 
+
+    def get_last_comments(self, issue_keys: list) -> pd.DataFrame:
+        cols = ['CLAVE', 'FECHA_ULTIMO_COMENTARIO', 'AUTOR_ULTIMO_COMENTARIO', 'ULTIMO_COMENTARIO']
+        rows = []
+        for key in issue_keys:
+            try:
+                comments = self.jira.comments(key)
+                if not comments:
+                    rows.append({'CLAVE': key, 'FECHA_ULTIMO_COMENTARIO': pd.NA,
+                                 'AUTOR_ULTIMO_COMENTARIO': pd.NA, 'ULTIMO_COMENTARIO': pd.NA})
+                    continue
+                c = comments[-1]
+                rows.append({
+                    'CLAVE': key,
+                    'FECHA_ULTIMO_COMENTARIO': pd.to_datetime(c.created, utc=True).tz_localize(None),
+                    'AUTOR_ULTIMO_COMENTARIO': c.author.displayName,
+                    'ULTIMO_COMENTARIO': c.body,
+                })
+            except Exception as e:
+                logger.warning("get_last_comments: error en issue %s: %s", key, e)
+                rows.append({'CLAVE': key, 'FECHA_ULTIMO_COMENTARIO': pd.NA,
+                             'AUTOR_ULTIMO_COMENTARIO': pd.NA, 'ULTIMO_COMENTARIO': pd.NA})
+        return pd.DataFrame(rows, columns=cols)
 
     def get_comments(self, issue_keys: list, dias: int = 14) -> pd.DataFrame:
         empty = pd.DataFrame(columns=['CLAVE', 'FECHA_COMENTARIO', 'AUTOR_COMENTARIO', 'COMENTARIO'])
