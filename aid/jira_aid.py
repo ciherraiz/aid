@@ -278,7 +278,7 @@ class JiraAID:
                         self.df_issues['INICIO'].notna() &
                         self.df_issues['FIN'].notna() &
                         self.df_issues['HBS_ESTIMADAS'].notna()
-                    ].copy()[['SOLUCION', 'CLAVE', 'INICIO', 'FIN', 'ESTADO_AGRUPADO', 'HBS_ESTIMADAS', 'HBS_RESTANTES']]
+                    ].copy()[['SOLUCION', 'CENTRO', 'CLAVE', 'INICIO', 'FIN', 'ESTADO_AGRUPADO', 'HBS_ESTIMADAS', 'HBS_RESTANTES']]
 
         hoy = pd.Timestamp.now().normalize()
 
@@ -322,7 +322,7 @@ class JiraAID:
         # Agrupar
         df_hbs_mes_prorr = (
             df_exp
-            .groupby(["SOLUCION", "MES", "ESTADO_AGRUPADO"], as_index=False)
+            .groupby(["SOLUCION", "CENTRO", "MES", "ESTADO_AGRUPADO"], as_index=False)
             [["HBS_ESTIMADAS_PRORR", "HBS_RESTANTES_PRORR"]]
             .sum()
         )
@@ -330,7 +330,7 @@ class JiraAID:
         df_hbs_mes_prorr_pivot = (
                 df_hbs_mes_prorr
                 .pivot_table(
-                    index=['SOLUCION', 'MES'],
+                    index=['SOLUCION', 'CENTRO', 'MES'],
                     columns="ESTADO_AGRUPADO",
                     values="HBS_RESTANTES_PRORR",
                     aggfunc="sum",
@@ -343,7 +343,7 @@ class JiraAID:
         df_hbs_mes_prorr_est_pivot = (
                 df_hbs_mes_prorr
                 .pivot_table(
-                    index=['SOLUCION', 'MES'],
+                    index=['SOLUCION', 'CENTRO', 'MES'],
                     columns="ESTADO_AGRUPADO",
                     values="HBS_ESTIMADAS_PRORR",
                     aggfunc="sum",
@@ -353,10 +353,10 @@ class JiraAID:
                 .reset_index()
         )
 
-        cols_pivot = df_hbs_mes_prorr_pivot.columns.difference(['SOLUCION', 'MES'])
+        cols_pivot = df_hbs_mes_prorr_pivot.columns.difference(['SOLUCION', 'CENTRO', 'MES'])
 
         df_hbs_mes_prorr_pivot['TOTAL_HBS_RESTANTES'] = df_hbs_mes_prorr_pivot[cols_pivot].sum(axis=1)
-        df_hbs_mes_prorr_pivot = df_hbs_mes_prorr_pivot.merge(df_hbs_mes_prorr_est_pivot, on=['SOLUCION', 'MES'], suffixes=('', '_EST'))
+        df_hbs_mes_prorr_pivot = df_hbs_mes_prorr_pivot.merge(df_hbs_mes_prorr_est_pivot, on=['SOLUCION', 'CENTRO', 'MES'], suffixes=('', '_EST'))
 
         #df_hbs_mes_prorr_pivot = df_hbs_mes_prorr_pivot.merge(df_soluciones[['SOLUCION', 'CODIGO_CANAL']], on='SOLUCION', how='left')
         #df_hbs_mes_prorr_pivot = df_hbs_mes_prorr_pivot.merge(df_cap_total.reset_index()[['CODIGO_CANAL', 'MES', 'HBS_CAPACIDAD']], on=['CODIGO_CANAL', 'MES'], how="left")
