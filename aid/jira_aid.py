@@ -123,7 +123,8 @@ class JiraAID:
 
         self.df_milestones = self.get_milestone_data()
 
-        df_last_comments = self.get_last_comments(self.df_issues['CLAVE'].tolist())
+        claves_bloqueadas = self.df_issues.loc[self.df_issues['ESTADO_AGRUPADO'] == 'BLOQUEADA', 'CLAVE'].tolist()
+        df_last_comments = self.get_last_comments(claves_bloqueadas)
         self.df_issues = self.df_issues.merge(df_last_comments, on='CLAVE', how='left')
 
         return self.df_issues[['SOLUCION',
