@@ -33,6 +33,7 @@ def main():
     df_comentarios = jira.get_comments(claves_bloqueo)
     logger.info("Calculando HBS")
     df_issues_hbs = jira.calculate_hbs()
+    df_issues_hbs.insert(0, 'ID', df_issues_hbs['SOLUCION'] + df_issues_hbs['CENTRO'].fillna(''))
     df_milestones = jira.df_milestones.copy()
     df_milestones.insert(0, 'ID', df_milestones['SOLUCION'] + df_milestones['CENTRO'])
 
