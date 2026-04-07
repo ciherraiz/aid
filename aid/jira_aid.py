@@ -288,12 +288,24 @@ class JiraAID:
 
         hoy = pd.Timestamp.now().normalize()
 
-        # Normalizar fechas y aplicar clip: el prorrateo empieza desde hoy como mínimo
-        df_hbs_prorr["INICIO_PRORR"] = df_hbs_prorr["INICIO"].dt.normalize().clip(lower=hoy)
-        df_hbs_prorr["FIN_PRORR"]    = df_hbs_prorr["FIN"].dt.normalize()
+        # --- Camino histórico: issues CERRADAS ---
+        # Se usan las fechas originales sin recorte para reflejar el período planificado completo,
+        # incluyendo meses pasados.
+        mask_cerradas = df_hbs_prorr["ESTADO_AGRUPADO"] == "CERRADA"
 
-        # Descartar incidencias que ya terminaron (FIN < hoy → no hay nada que prorratear)
-        df_hbs_prorr = df_hbs_prorr[df_hbs_prorr["FIN_PRORR"] >= hoy]
+        df_cerradas = df_hbs_prorr[mask_cerradas].copy()
+        df_cerradas["INICIO_PRORR"] = df_cerradas["INICIO"].dt.normalize()
+        df_cerradas["FIN_PRORR"]    = df_cerradas["FIN"].dt.normalize()
+
+        # --- Camino prospectivo: issues no cerradas ---
+        # El prorrateo empieza desde hoy como mínimo; se descartan las que ya terminaron.
+        df_abiertas = df_hbs_prorr[~mask_cerradas].copy()
+        df_abiertas["INICIO_PRORR"] = df_abiertas["INICIO"].dt.normalize().clip(lower=hoy)
+        df_abiertas["FIN_PRORR"]    = df_abiertas["FIN"].dt.normalize()
+        df_abiertas = df_abiertas[df_abiertas["FIN_PRORR"] >= hoy]
+
+        # Unir ambos caminos antes de continuar con el pipeline común
+        df_hbs_prorr = pd.concat([df_cerradas, df_abiertas], ignore_index=True)
 
         # Duración total del período de prorrateo
         df_hbs_prorr["DIAS_TOTALES"] = (df_hbs_prorr["FIN_PRORR"] - df_hbs_prorr["INICIO_PRORR"]).dt.days + 1
