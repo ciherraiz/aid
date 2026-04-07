@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import os
 import ssl
@@ -483,7 +483,7 @@ class JiraAID:
         if not issue_keys:
             return empty
 
-        fecha_umbral = datetime.utcnow() - timedelta(days=dias)
+        fecha_umbral = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=dias)
 
         rows = []
         for key in issue_keys:
