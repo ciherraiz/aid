@@ -120,6 +120,7 @@ class JiraAID:
         df = self.issues_to_df(self.issues)
         self.df_issues = self.clean_issues(df)
         self.extract_relations()
+        self.df_issues = self.df_issues.join(self.build_relations_text(), on='CLAVE')
 
         self.df_milestones = self.get_milestone_data()
 
@@ -150,7 +151,8 @@ class JiraAID:
                             'JUSTIFICACION_LIMITE',
                             'FECHA_ULTIMO_COMENTARIO',
                             'AUTOR_ULTIMO_COMENTARIO',
-                            'ULTIMO_COMENTARIO']].copy()
+                            'ULTIMO_COMENTARIO',
+                            'RELACIONES']].copy()
 
 
     def get_issues(self, jql: str):
@@ -388,11 +390,26 @@ class JiraAID:
         relations = []
         for issue in self.issues:
             for link in issue.fields.issuelinks:
-                #sólo tenecesito la relación desde mis issues a cualquier otra (inward)
                 if hasattr(link, "inwardIssue"):
-                    relations.append({'CLAVE_ORIGEN': issue.key,  'RELACION':link.type.inward, 'CLAVE_DESTINO': link.inwardIssue.key})
+                    relations.append({'CLAVE_ORIGEN': issue.key, 'RELACION': link.type.inward, 'CLAVE_DESTINO': link.inwardIssue.key})
+                if hasattr(link, "outwardIssue"):
+                    relations.append({'CLAVE_ORIGEN': issue.key, 'RELACION': link.type.outward, 'CLAVE_DESTINO': link.outwardIssue.key})
 
         self.df_relations = pd.DataFrame(relations)
+
+    def build_relations_text(self):
+        if self.df_relations.empty:
+            return pd.Series(dtype=str, name='RELACIONES')
+        return (
+            self.df_relations
+            .groupby(['CLAVE_ORIGEN', 'RELACION'])['CLAVE_DESTINO']
+            .apply(', '.join)
+            .reset_index()
+            .assign(parte=lambda x: x['RELACION'] + ': ' + x['CLAVE_DESTINO'])
+            .groupby('CLAVE_ORIGEN')['parte']
+            .apply('; '.join)
+            .rename('RELACIONES')
+        )
 
     data = []
 
